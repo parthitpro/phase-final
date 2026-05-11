@@ -101,6 +101,18 @@ def delete_customer(customer_id: int, db: Session = Depends(database.get_db)):
 
 def add_order_log(db: Session, order_id: int, status: str, description: str = None):
     try:
+        # If this is an 'undo' or manual status set, we should remove logs that come "after" this new status
+        # to keep the timeline clean.
+        status_order = ["Received", "In Manufacturing", "Ready for Delivery", "Out for Delivery", "Delivered", "Cancelled"]
+        if status in status_order:
+            current_idx = status_order.index(status)
+            future_statuses = status_order[current_idx + 1:]
+            if status != "Cancelled": # Don't clear logs if cancelling, but clear if moving back FROM cancelled
+                db.query(models.OrderLog).filter(
+                    models.OrderLog.order_id == order_id,
+                    models.OrderLog.status_reached.in_(future_statuses)
+                ).delete(synchronize_session=False)
+
         log = models.OrderLog(order_id=order_id, status_reached=status, description=description)
         db.add(log)
         db.flush()
@@ -114,12 +126,16 @@ def add_order_log(db: Session, order_id: int, status: str, description: str = No
 @app.get("/orders", response_model=List[schemas.Order])
 def get_orders(db: Session = Depends(database.get_db)):
     return db.query(models.Order).options(
-        joinedload(models.Order.items).joinedload(models.OrderItem.product)
+        joinedload(models.Order.items).joinedload(models.OrderItem.product),
+        joinedload(models.Order.logs)
     ).order_by(models.Order.date.desc()).all()
 
 @app.get("/orders/{order_id}", response_model=schemas.Order)
 def get_order(order_id: int, db: Session = Depends(database.get_db)):
-    db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    db_order = db.query(models.Order).options(
+        joinedload(models.Order.items).joinedload(models.OrderItem.product),
+        joinedload(models.Order.logs)
+    ).filter(models.Order.id == order_id).first()
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")
     return db_order

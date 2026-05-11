@@ -785,7 +785,7 @@ function App() {
               <Icons.Undo style={{width: 20, height: 20}} />
             </button>
           </div>
-          <div className="header-search">
+          <div className="search-header">
             <Icons.Search />
             <input 
               type="text" 
@@ -854,7 +854,7 @@ function App() {
                   </div>
 
                   {selectedCustomer && (
-                    <div className="info-card" style={{background: 'var(--accent-soft)', borderLeft: '4px solid var(--accent)'}}>
+                    <div className="customer-info-card" style={{background: 'var(--accent-soft)', borderLeft: '4px solid var(--accent)'}}>
                       <div className="info-header"><Icons.Dashboard /> CUSTOMER NOTES</div>
                       <div className="info-content">{selectedCustomer.notes}</div>
                     </div>
@@ -886,13 +886,13 @@ function App() {
             <div className="modern-receipt" style={{padding: currentOrderItems.length === 0 ? '2rem' : '0'}}>
               {currentOrderItems.length === 0 ? (
                 <div style={{textAlign: 'center', color: 'var(--text-muted)'}}>
-                  <div style={{fontSize: '2.5rem', marginBottom: '1rem'}}>🧾</div>
+                  <div style={{fontSize: '2.5rem', marginBottom: '1rem'}}><Icons.Orders style={{width: 48, height: 48, margin: '0 auto'}} /></div>
                   <h4 style={{margin: 0}}>Receipt Placeholder</h4>
                   <p style={{fontSize: '0.8rem', marginTop: '0.5rem'}}>Select products to build the bill.</p>
                 </div>
               ) : (
                 <>
-                  <div className="receipt-header"><h2><Icons.Bag style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '10px'}} /> VIREN'S KHAKHRA</h2><div style={{fontSize: '0.8rem', opacity: 0.8}}>{editingOrderId ? '🔄 MODIFIED' : '🆕 NEW'} ORDER RECEIPT</div></div>
+                  <div className="receipt-header"><h2><Icons.Bag style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '10px'}} /> VIREN'S KHAKHRA</h2><div style={{fontSize: '0.8rem', opacity: 0.8}}>{editingOrderId ? 'MODIFIED' : 'NEW'} ORDER RECEIPT</div></div>
                   <div className="receipt-body">
                     <div className="receipt-meta"><div><strong>Client:</strong><br/>{customerName || '---'}</div><div style={{textAlign: 'right'}}><strong>Date:</strong><br/>{formatDisplayDate(new Date())}</div></div>
                     <table className="receipt-table">
@@ -1041,20 +1041,41 @@ function App() {
                 </div>
               );
             })() : (
-              <div className="card" style={{padding: 0, overflow: 'hidden'}}>
-                <div style={{padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-main)'}}>
-                  <div className="header-search" style={{width: '100%', margin: 0}}>
-                    <Icons.Search />
-                    <input
-                      type="text"
-                      className="header-search-input"
-                      placeholder="Search by Customer Name, Order ID, or Items..."
-                      value={orderFilter}
-                      onChange={(e) => setOrderFilter(e.target.value)}
-                    />
-                  </div>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
+                <div className="status-summary-bar">
+                  {[
+                    { label: 'Received', color: '#64748b', icon: <Icons.Orders />, count: orders.filter(o => o.order_status === 'Received').length },
+                    { label: 'Baking', color: '#f59e0b', icon: <Icons.Flame />, count: orders.filter(o => o.order_status === 'In Manufacturing').length },
+                    { label: 'Packed', color: '#10b981', icon: <Icons.Bag />, count: orders.filter(o => o.order_status === 'Ready for Delivery').length },
+                    { label: 'Shipping', color: '#4f46e5', icon: <Icons.Delivery />, count: orders.filter(o => o.order_status === 'Out for Delivery').length },
+                    { label: 'Delivered', color: '#059669', icon: <Icons.Check />, count: orders.filter(o => o.order_status === 'Delivered').length }
+                  ].map(s => (
+                    <div key={s.label} className="status-mini-card">
+                      <div className="status-mini-icon" style={{background: `${s.color}20`, color: s.color}}>
+                        {s.icon}
+                      </div>
+                      <div className="status-mini-info">
+                        <span className="status-mini-label">{s.label}</span>
+                        <span className="status-mini-value">{s.count}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <table className="modern-table">
+
+                <div className="card" style={{padding: 0, overflow: 'hidden'}}>
+                  <div style={{padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-main)'}}>
+                    <div className="search-header" style={{width: '100%', margin: 0}}>
+                      <Icons.Search />
+                      <input
+                        type="text"
+                        className="header-search-input"
+                        placeholder="Search by Customer Name, Order ID, or Items..."
+                        value={orderFilter}
+                        onChange={(e) => setOrderFilter(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <table className="modern-table">
                   <thead><tr><th className="sortable-header" onClick={() => setOrderSort({key: 'id', dir: orderSort.key === 'id' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>ID <SortIcon active={orderSort.key === 'id'} direction={orderSort.dir} /></th><th className="sortable-header" onClick={() => setOrderSort({key: 'date', dir: orderSort.key === 'date' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>Date <SortIcon active={orderSort.key === 'date'} direction={orderSort.dir} /></th><th className="sortable-header" onClick={() => setOrderSort({key: 'customer', dir: orderSort.key === 'customer' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>Customer <SortIcon active={orderSort.key === 'customer'} direction={orderSort.dir} /></th><th className="sortable-header" onClick={() => setOrderSort({key: 'total_amount', dir: orderSort.key === 'total_amount' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>Amount <SortIcon active={orderSort.key === 'total_amount'} direction={orderSort.dir} /></th><th>Order Status Timeline</th><th className="no-print">Actions</th></tr></thead>
                   <tbody>{filteredSortedOrders.map(o => (
                     <tr key={o.id} className={o.order_status === 'Cancelled' ? 'order-cancelled' : ''} onClick={() => setViewingOrderId(o.id)} style={{cursor: 'pointer'}}>
@@ -1094,6 +1115,7 @@ function App() {
                     </tr>
                   ))}</tbody>
                 </table>
+              </div>
               </div>
             )}
           </div>
@@ -1350,7 +1372,7 @@ function App() {
             <div style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
               <div className="card" style={{padding: '1.25rem', borderLeft: '6px solid var(--accent)'}}>
                 <h3 style={{marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.1rem', justifyContent: 'space-between'}}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}><div style={{width: 45, height: 45}}><AnimatedDelivery /></div>Deliveries Pending Payment</div>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}><Icons.Money className="anim-pulse" style={{color: 'var(--accent)'}} /> Deliveries Pending Payment</div>
                   <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
                     {(() => {
                       const pending = orders.filter(o => (o.order_status === 'Delivered' || o.order_status === 'Out for Delivery') && o.payment_status === 'Pending');
@@ -1371,7 +1393,7 @@ function App() {
                     {orders.filter(o => (o.order_status === 'Delivered' || o.order_status === 'Out for Delivery') && o.payment_status === 'Pending').map(o => (
                       <div key={o.id} className="collection-item" style={{background: 'var(--bg-main)', padding: '0.85rem 1rem', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)'}}>
                         <div><div style={{fontWeight: 800, fontSize: '0.95rem'}}>{(o.summary_text || '').split(' ->>')[0]}</div><div style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem'}}><span className="badge" style={{padding: '0.1rem 0.4rem', fontSize: '0.65rem', marginRight: '0.5rem'}}>{o.order_status === 'Out for Delivery' ? <><Icons.Delivery style={{width: 10, height: 10}} /> ON TRUCK</> : <><Icons.Bag style={{width: 10, height: 10}} /> DELIVERED</>}</span>₹{o.total_amount} • ID: #{o.id}</div></div>
-                        <div style={{display: 'flex', gap: '0.4rem'}}><button className="btn btn-secondary" style={{padding: '0.35rem 0.65rem', fontSize: '0.7rem'}} onClick={() => undoStatus(o)}>UNDO</button><button className="btn btn-success-outline" style={{padding: '0.35rem 0.65rem', fontSize: '0.7rem', fontWeight: 800}} onClick={() => updatePaymentStatus(o.id, 'Cash')}>CASH</button><button className="btn btn-accent-outline" style={{padding: '0.35rem 0.65rem', fontSize: '0.7rem', fontWeight: 800}} onClick={() => updatePaymentStatus(o.id, 'UPI')}>UPI</button><button className="btn btn-danger-outline" style={{padding: '0.35rem 0.65rem', fontSize: '0.7rem', fontWeight: 800}} onClick={() => updatePaymentStatus(o.id, 'Debt')}>DEBT</button></div>
+                        <div style={{display: 'flex', gap: '0.4rem'}}><button className="btn btn-secondary" style={{padding: '0.35rem 0.65rem', fontSize: '0.7rem'}} onClick={() => undoStatus(o)}>UNDO</button><button className="btn btn-success-outline" style={{padding: '0.35rem 0.65rem', fontSize: '0.7rem', fontWeight: 800}} onClick={() => updatePaymentStatus(o.id, 'Cash')}><Icons.Check style={{width: 12, height: 12}} /> CASH</button><button className="btn btn-accent-outline" style={{padding: '0.35rem 0.65rem', fontSize: '0.7rem', fontWeight: 800}} onClick={() => updatePaymentStatus(o.id, 'UPI')}><Icons.Zap style={{width: 12, height: 12}} /> UPI</button><button className="btn btn-danger-outline" style={{padding: '0.35rem 0.65rem', fontSize: '0.7rem', fontWeight: 800}} onClick={() => updatePaymentStatus(o.id, 'Debt')}><Icons.Alert style={{width: 12, height: 12}} /> DEBT</button></div>
                       </div>
                     ))}
                     {orders.filter(o => (o.order_status === 'Delivered' || o.order_status === 'Out for Delivery') && o.payment_status === 'Pending').length === 0 && (<div style={{textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem'}}>No new deliveries waiting for payment assignment.</div>)}
@@ -1458,7 +1480,7 @@ function App() {
         {activeTab === 'customers' && (
           <div className="customers-page" style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-              <div className="header-search" style={{width: '400px', margin: 0}}>
+              <div className="search-header" style={{width: '400px', margin: 0}}>
                 <Icons.Search />
                 <input
                   type="text"

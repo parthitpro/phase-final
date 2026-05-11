@@ -55,21 +55,29 @@ export const SearchableAutocomplete = ({
         value={value}
         onChange={e => { onChange(e.target.value); setIsOpen(true); }}
         onFocus={() => setIsOpen(true)}
-        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 250)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        autoComplete="off"
       />
       {isOpen && filteredOptions.length > 0 && (
-        <div className="autocomplete-dropdown">
-          {filteredOptions.map((opt, idx) => (
-            <div 
-              key={opt}
-              className={`autocomplete-item ${idx === highlightedIndex ? 'highlighted' : ''}`}
-              onMouseDown={() => selectOption(opt)}
-            >
-              {opt}
-            </div>
-          ))}
+        <div className="autocomplete-dropdown shadow-xl">
+          <div className="dropdown-scroll">
+            {filteredOptions.map((opt, idx) => (
+              <div 
+                key={opt}
+                className={`autocomplete-item ${idx === highlightedIndex ? 'highlighted' : ''}`}
+                onMouseDown={() => selectOption(opt)}
+              >
+                <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                  <div style={{width: '28px', height: '28px', background: 'var(--accent-soft)', color: 'var(--accent)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 900}}>
+                    {opt.charAt(0).toUpperCase()}
+                  </div>
+                  <span>{opt}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -85,7 +93,18 @@ export const SortIcon = ({ active, direction }: { active: boolean, direction: 'a
 
 export const Toast = ({ message, type }: { message: string, type: 'success' | 'error' }) => (
   <div className="toast">
-    <span style={{fontSize: '1.2rem'}}>{type === 'success' ? '✅' : '❌'}</span>
+    <div style={{
+      width: '28px', 
+      height: '28px', 
+      borderRadius: '50%', 
+      background: type === 'success' ? 'var(--success)' : 'var(--danger)', 
+      color: 'white', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center'
+    }}>
+      {type === 'success' ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{width: 16, height: 16}}><polyline points="20 6 9 17 4 12"></polyline></svg> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{width: 16, height: 16}}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>}
+    </div>
     {message}
   </div>
 );
