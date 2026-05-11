@@ -1,0 +1,66 @@
+# Viren's Khakhra Project Progress Log
+
+## Project Overview
+A full-stack ordering system for "Viren's Khakhra" business, replacing an Excel-based workflow.
+
+### Session: 2026-04-30 (UI Refinement & Workflow Polish)
+
+### Change Log (Completed)
+- **Global Search:** Functional top-right search bar that filters orders and switches tabs automatically.
+- **Icon Standardization:** Enforced 20px SVG sizing globally.
+- **Master Inventory:** Unified Wholesale/Retail lists into a single-line compact table.
+- **Money Collection:** New decision-based workflow (Cash/UPI/Debt) with strict debt isolation.
+- **Date Formatting:** Global standardized `DD-Month-YY` format implemented.
+
+### Session: 2026-05-02 (Manufacturing, Delivery & Timeline Workflow)
+
+### Change Log (Completed)
+- **Multi-Stage Order Lifecycle:** Introduced formal `order_status` tracking: `Received` -> `In Manufacturing` -> `Ready for Delivery` -> `Out for Delivery` -> `Delivered`.
+- **Order Timeline & Logs:** Added a dedicated `OrderLog` system to track every state change with timestamps and descriptions, displayed in a visual vertical timeline on the frontend.
+- **Manufacturing Department Tab:** 
+    - **Bulk Aggregation:** New view to aggregate required product weights across multiple orders within a custom date range.
+    - **Bulk Dispatch:** One-click action to send all filtered orders to production.
+- **Delivery Workflow Tab:** Dedicated management of orders ready for dispatch and currently out for delivery.
+- **Backend Hardening:** New API endpoints for bulk status updates and manufacturing projections. Database migration (v3) successfully applied.
+
+### Planned Goals
+- **Architectural Health:** [COMPLETED] "God Node" refactoring of `App.tsx` and backend hardening.
+- **AI Ready:** [COMPLETED] Full Graphify indexing and onboarding documentation.
+- **Analytics Polish:** Enhance charts with more granular data (Next Priority).
+- **Smart Order Suggestions:** [COMPLETED] Interactive auto-fill logic implemented.
+- **Customer Notes:** [COMPLETED] Backend/Frontend support finished.
+- **Contextual Visibility:** [COMPLETED] Notes display on Dashboard.
+- **Manufacturing Workflow:** [COMPLETED] Bulk dispatch and aggregation implemented.
+- **Order Timeline:** [COMPLETED] Visual log-based tracking for customers/admins.
+Bulk Dispatch:** One-click action to send all filtered orders to production.
+- **Delivery Workflow Tab:** Dedicated management of orders ready for dispatch and currently out for delivery.
+- **Backend Hardening:** New API endpoints for bulk status updates and manufacturing projections. Database migration (v3) successfully applied.
+
+### Session: 2026-05-10 (Premium SaaS Redesign & Pro Analytics)
+
+### Change Log (Completed)
+- **"Soft Modern" UI Overhaul:**
+    - Replaced the previous interface with a premium, airy SaaS aesthetic inspired by top-tier platforms.
+    - **Aesthetic:** Implemented high-contrast "Coral" accents, deep "Space" dark mode, and a dynamic 3-color animated mesh background.
+    - **Glassmorphism:** Applied semi-transparent "frosted glass" containers with backdrop blurs across the entire app.
+    - **Bubbly Geometry:** Increased all border-radii (up to 40px) and replaced harsh borders with deep, soft drop shadows.
+- **Pro Business Dashboards:**
+    - **Pro Product Profile:** Created a high-end drill-down for flavors including dynamic SVG animations, wholesale/retail gap analysis, "🔥 Trending" badges, and "Top Fans" loyalty lists.
+    - **Pro Customer CRM:** Upgraded customer profiles to include **VIP Tiers (Diamond/Gold/Silver)**, "Payment Trust Scores," "Flavor Affinity" calculation, and inactivity alerts.
+- **Workflow & Logistics Upgrades:**
+    - **Exp 1 (Logistics Pro):** Built a dedicated mobile-first "Driver Dashboard" featuring large tap-friendly cards, one-click WhatsApp/Call/Map links, and an integrated "Mark Delivered & Collect Cash" workflow.
+    - **Manufacturing Intelligence:** Added bulk selection to the production queue with live weight aggregation summaries for "In Manufacturing" orders.
+    - **Fail-Safe Delivery:** Implemented "Not Delivered (Return)" action that automatically flags orders as "⚠️ PREVIOUS ORDER DUE" in the dispatch list to prevent missing orders.
+    - **Smart Receipt:** Redesigned the Dashboard Bill to be dynamic (compact by default, expands as items are added).
+- **Hardening & Precision:**
+    - **High-Precision Weight:** Standardized all weight displays to support up to 3 decimal places (e.g., 0.25kg / 250g) without rounding.
+    - **SaaS Iconography:** Completely replaced Unicode emojis and basic SVGs with the professional **Lucide React** library.
+    - **Global Crash Protection:** Added deep null-safe checks to all `useMemo` hooks and split-string logic to prevent blank screens on corrupted data.
+
+### Planned Goals
+- **Smart Order Suggestions:** [COMPLETED] Interactive auto-fill logic implemented.
+- **Manufacturing Workflow:** [COMPLETED] Bulk dispatch and aggregation implemented.
+- **Pro CRM & Analytics:** [COMPLETED] VIP tiers and Flavor affinity dashboards finished.
+- **Logistics Pro:** [COMPLETED] Mobile-first driver interface (Exp 1) implemented.
+- **Mobile Responsive Polish:** Further refine dense tables for smaller screens.
+- **Database Backup:** Implement an automated local backup script for `orders.db`.
