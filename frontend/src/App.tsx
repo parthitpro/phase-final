@@ -30,6 +30,7 @@ function App() {
   const [weights, setWeights] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now();
@@ -610,6 +611,9 @@ function App() {
         o.id.toString().includes(lowFilter)
       );
     }
+    if (statusFilter) {
+      intermediateResult = intermediateResult.filter(o => o.order_status === statusFilter);
+    }
     intermediateResult.sort((a, b) => {
       let aVal: string | number, bVal: string | number;
       if (orderSort.key === 'customer') {
@@ -1041,16 +1045,21 @@ function App() {
                 </div>
               );
             })() : (
-              <div style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
+              <div className="manage-orders-container" style={{display: 'flex', flexDirection: 'column', gap: '2.5rem'}}>
                 <div className="status-summary-bar">
                   {[
-                    { label: 'Received', color: '#64748b', icon: <Icons.Orders />, count: orders.filter(o => o.order_status === 'Received').length },
-                    { label: 'Baking', color: '#f59e0b', icon: <Icons.Flame />, count: orders.filter(o => o.order_status === 'In Manufacturing').length },
-                    { label: 'Packed', color: '#10b981', icon: <Icons.Bag />, count: orders.filter(o => o.order_status === 'Ready for Delivery').length },
-                    { label: 'Shipping', color: '#4f46e5', icon: <Icons.Delivery />, count: orders.filter(o => o.order_status === 'Out for Delivery').length },
-                    { label: 'Delivered', color: '#059669', icon: <Icons.Check />, count: orders.filter(o => o.order_status === 'Delivered').length }
+                    { label: 'Received', status: 'Received', color: '#64748b', icon: <Icons.Orders />, count: orders.filter(o => o.order_status === 'Received').length },
+                    { label: 'Baking', status: 'In Manufacturing', color: '#f59e0b', icon: <Icons.Flame />, count: orders.filter(o => o.order_status === 'In Manufacturing').length },
+                    { label: 'Packed', status: 'Ready for Delivery', color: '#10b981', icon: <Icons.Bag />, count: orders.filter(o => o.order_status === 'Ready for Delivery').length },
+                    { label: 'Shipping', status: 'Out for Delivery', color: '#4f46e5', icon: <Icons.Delivery />, count: orders.filter(o => o.order_status === 'Out for Delivery').length },
+                    { label: 'Delivered', status: 'Delivered', color: '#059669', icon: <Icons.Check />, count: orders.filter(o => o.order_status === 'Delivered').length }
                   ].map(s => (
-                    <div key={s.label} className="status-mini-card">
+                    <div 
+                      key={s.label} 
+                      className={`status-mini-card ${statusFilter === s.status ? 'active' : ''}`}
+                      onClick={() => setStatusFilter(statusFilter === s.status ? null : s.status)}
+                      style={{cursor: 'pointer'}}
+                    >
                       <div className="status-mini-icon" style={{background: `${s.color}20`, color: s.color}}>
                         {s.icon}
                       </div>
@@ -1076,7 +1085,7 @@ function App() {
                     </div>
                   </div>
                   <table className="modern-table">
-                  <thead><tr><th className="sortable-header" onClick={() => setOrderSort({key: 'id', dir: orderSort.key === 'id' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>ID <SortIcon active={orderSort.key === 'id'} direction={orderSort.dir} /></th><th className="sortable-header" onClick={() => setOrderSort({key: 'date', dir: orderSort.key === 'date' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>Date <SortIcon active={orderSort.key === 'date'} direction={orderSort.dir} /></th><th className="sortable-header" onClick={() => setOrderSort({key: 'customer', dir: orderSort.key === 'customer' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>Customer <SortIcon active={orderSort.key === 'customer'} direction={orderSort.dir} /></th><th className="sortable-header" onClick={() => setOrderSort({key: 'total_amount', dir: orderSort.key === 'total_amount' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>Amount <SortIcon active={orderSort.key === 'total_amount'} direction={orderSort.dir} /></th><th>Order Status Timeline</th><th className="no-print">Actions</th></tr></thead>
+                  <thead><tr><th className="sortable-header" onClick={() => setOrderSort({key: 'id', dir: orderSort.key === 'id' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>ID <SortIcon active={orderSort.key === 'id'} direction={orderSort.dir} /></th><th className="sortable-header" onClick={() => setOrderSort({key: 'date', dir: orderSort.key === 'date' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>Date <SortIcon active={orderSort.key === 'date'} direction={orderSort.dir} /></th><th className="sortable-header" onClick={() => setOrderSort({key: 'customer', dir: orderSort.key === 'customer' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>Customer <SortIcon active={orderSort.key === 'customer'} direction={orderSort.dir} /></th><th className="sortable-header" onClick={() => setOrderSort({key: 'total_amount', dir: orderSort.key === 'total_amount' && orderSort.dir === 'asc' ? 'desc' : 'asc'})}>Amount <SortIcon active={orderSort.key === 'total_amount'} direction={orderSort.dir} /></th><th style={{minWidth: '320px'}}>Order Status Timeline</th><th className="no-print">Actions</th></tr></thead>
                   <tbody>{filteredSortedOrders.map(o => (
                     <tr key={o.id} className={o.order_status === 'Cancelled' ? 'order-cancelled' : ''} onClick={() => setViewingOrderId(o.id)} style={{cursor: 'pointer'}}>
                       <td style={{position: 'relative'}}>

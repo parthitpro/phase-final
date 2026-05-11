@@ -126,8 +126,9 @@ To ensure cascading deletes work in SQLite, the engine must listen for the conne
 
 ---
 
-## 8. Summary of Recent Fixes (2026-04-30)
-- Fixed "White Screen" race condition by synchronizing `replace` calls.
-- Resolved `Ctrl + Enter` shortcut failure after clicking repeat suggestions using a global listener.
-- Implemented clickable "Repeat" tags to auto-fill data.
-- Standardized all icons to 20px to fix UI alignment bugs.
+## 8. Summary of Recent Fixes (2026-05-12)
+- **Status Filtering**: Summary cards (Received, Baking, etc.) are now interactive filters that update the Manage Orders view in real-time.
+- **Timeline Synchronization**: Re-engineered `Timeline.tsx` to use a hierarchical rank system, ensuring the visual progress bar remains accurate even if intermediate logs are missing or skipped.
+- **Project Restoration**: Fixed critical JSX parsing errors and rescued corrupted template literal syntax (`${...}`).
+- **UI Standardization**: Synchronized class names (`search-header`, `customer-info-card`) across CSS and TSX to fix styling bugs.
+- **Visual Polish**: Applied "Glassmorphism" styling and smooth transitions to status summary cards.

@@ -57,10 +57,22 @@ Bulk Dispatch:** One-click action to send all filtered orders to production.
     - **SaaS Iconography:** Completely replaced Unicode emojis and basic SVGs with the professional **Lucide React** library.
     - **Global Crash Protection:** Added deep null-safe checks to all `useMemo` hooks and split-string logic to prevent blank screens on corrupted data.
 
+### Session: 2026-05-12 (Project Restoration & UX Intelligence)
+
+### Change Log (Completed)
+- **Emergency System Restoration:**
+    - Fixed critical React parsing errors and broken JSX tags in `App.tsx`.
+    - Rescued the codebase from a corrupted global find-and-replace that had accidentally modified JavaScript template literals (`${...}`) into invalid `₹{...}` syntax.
+- **Interactive UI & Filtering:**
+    - **Smart Status Filters:** Transformed the "Order Status Summary" cards into interactive filter buttons. Users can now click "Baking" or "Packed" to instantly filter the Manage Orders table.
+    - **Active State Feedback:** Implemented a "Glowing" active state for selected filters with smooth CSS transitions.
+- **Timeline Logic Overhaul:**
+    - **Rank-Based Synchronization:** Re-engineered the `Timeline.tsx` logic. The system now uses a status hierarchy to ensure the timeline remains perfectly synced even if an order skips intermediate steps or is updated manually.
+    - **Enhanced Table Layout:** Increased the width and robustness of the "Order Status Timeline" column to prevent squashing and ensure better readability on all screens.
+- **Styling Standardization:**
+    - Fixed class name mismatches (`header-search` -> `search-header`) to restore the intended premium look of search bars and info cards.
+
 ### Planned Goals
-- **Smart Order Suggestions:** [COMPLETED] Interactive auto-fill logic implemented.
-- **Manufacturing Workflow:** [COMPLETED] Bulk dispatch and aggregation implemented.
-- **Pro CRM & Analytics:** [COMPLETED] VIP tiers and Flavor affinity dashboards finished.
-- **Logistics Pro:** [COMPLETED] Mobile-first driver interface (Exp 1) implemented.
-- **Mobile Responsive Polish:** Further refine dense tables for smaller screens.
+- **Mobile Responsive Polish:** [IN PROGRESS] Table columns widened for readability; further mobile-first tweaks planned.
+- **Order Timeline:** [RE-COMPLETED] Synchronized hierarchy-based logic implemented.
 - **Database Backup:** Implement an automated local backup script for `orders.db`.
