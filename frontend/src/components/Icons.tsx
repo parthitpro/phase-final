@@ -34,7 +34,8 @@ import {
   Ban,
   Medal,
   Check,
-  Pencil
+  Pencil,
+  Cpu
 } from 'lucide-react';
 
 export const Icons = {
@@ -73,5 +74,6 @@ export const Icons = {
   Trust: ShieldCheck,
   Ban: Ban,
   Medal: Medal,
-  Check: Check
+  Check: Check,
+  Cpu: Cpu
 };

@@ -1902,56 +1902,67 @@ function App() {
                 <div style={{width: 80, height: 80, background: 'var(--accent-soft)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', margin: '0 auto 1.5rem'}}>
                   <Icons.Zap size={40} />
                 </div>
-                <h2 style={{fontSize: '2rem', marginBottom: '0.5rem'}}>AI Assistant Engine</h2>
-                <p style={{color: 'var(--text-muted)'}}>Configure your smart business analyst powered by OpenRouter.</p>
+                <h2 style={{fontSize: '2rem', marginBottom: '0.5rem'}}>Local AI Assistant</h2>
+                <p style={{color: 'var(--text-muted)'}}>Private, offline, and free AI running directly on your device.</p>
               </div>
 
               <div style={{display: 'flex', flexDirection: 'column', gap: '2.5rem'}}>
-                <div className="input-group">
-                  <label style={{display: 'flex', justifyContent: 'space-between'}}>
-                    OPENROUTER API KEY
-                    <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 800}}>GET KEY HERE →</a>
-                  </label>
-                  <input 
-                    type="password" 
-                    className="styled-input" 
-                    placeholder="sk-or-v1-..."
-                    value={localStorage.getItem('openrouter_api_key') || ''}
-                    onChange={(e) => {
-                      localStorage.setItem('openrouter_api_key', e.target.value);
-                      fetchData(); // Trigger re-render
-                    }}
-                  />
-                  <p style={{fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem'}}>Your key is saved locally in your browser and never sent to our servers.</p>
+                <div className="info-box" style={{background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.5rem'}}>
+                  <h4 style={{margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800}}>
+                    <Icons.Trust size={18} /> WEB-LLM TECHNOLOGY
+                  </h4>
+                  <p style={{fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.6'}}>
+                    Viren's Khakhra now uses **WebGPU** to run AI models directly in your browser. 
+                    This removes the need for expensive API keys and guarantees 100% privacy.
+                  </p>
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem'}}>
+                    <div style={{padding: '1rem', background: 'var(--white)', borderRadius: '8px', border: '1px solid var(--border)'}}>
+                      <div style={{fontWeight: 800, fontSize: '0.75rem', color: 'var(--accent)', marginBottom: '0.25rem'}}>PRIVACY</div>
+                      <div style={{fontSize: '0.85rem'}}>100% On-Device</div>
+                    </div>
+                    <div style={{padding: '1rem', background: 'var(--white)', borderRadius: '8px', border: '1px solid var(--border)'}}>
+                      <div style={{fontWeight: 800, fontSize: '0.75rem', color: 'var(--success)', marginBottom: '0.25rem'}}>COST</div>
+                      <div style={{fontSize: '0.85rem'}}>Free Forever</div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="input-group">
-                  <label>PREFERRED AI MODEL</label>
-                  <select 
-                    className="styled-input"
-                    value={localStorage.getItem('openrouter_model') || 'google/gemma-4-31b-it:free'}
-                    onChange={(e) => {
-                      localStorage.setItem('openrouter_model', e.target.value);
-                      fetchData(); // Trigger re-render
+                  <label>ACTIVE AI ENGINE</label>
+                  <div style={{padding: '1.25rem', background: 'var(--bg-main)', borderRadius: '12px', border: '2px solid var(--accent-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div>
+                      <div style={{fontWeight: 800, fontSize: '1rem'}}>Llama 3.2 (1B Instruct)</div>
+                      <div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Optimized for speed and business logic</div>
+                    </div>
+                    <span className="badge" style={{background: 'var(--accent-gradient)', color: 'white', padding: '0.4rem 0.8rem'}}>LOCAL</span>
+                  </div>
+                </div>
+
+                <div style={{display: 'flex', gap: '1rem'}}>
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{flex: 1}}
+                    onClick={() => {
+                      if (window.confirm("This will clear the cached AI model (~1.5GB). You will need to re-download it. Proceed?")) {
+                        window.indexedDB.deleteDatabase("webllm-db");
+                        alert("Cache cleared.");
+                        window.location.reload();
+                      }
                     }}
                   >
-                    <option value="google/gemma-4-31b-it:free">Google Gemma 4 31B (Powerful)</option>
-                    <option value="google/gemma-4-26b-a4b-it:free">Google Gemma 4 26B (Vision/Video)</option>
-                    <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (Reliable)</option>
-                    <option value="qwen/qwen3-coder:free">Qwen 3 Coder (Best for Logic)</option>
-                    <option value="z-ai/glm-4.5-air:free">GLM 4.5 Air (Fast & Smart)</option>
-                    <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Legacy Free)</option>
-                  </select>
+                    RESET MODEL CACHE
+                  </button>
+                  <button className="btn btn-primary" style={{flex: 1}} onClick={() => setActiveTab('dashboard')}>
+                    BACK TO DASHBOARD
+                  </button>
                 </div>
 
                 <div className="customer-info-card" style={{background: 'var(--success-soft)', borderLeft: '4px solid var(--success)', padding: '1.5rem'}}>
                   <h4 style={{margin: '0 0 0.5rem 0', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-                    <Icons.CheckCircle size={18} /> SYSTEM STATUS
+                    <Icons.CheckCircle size={18} /> WEB-GPU STATUS
                   </h4>
                   <p style={{fontSize: '0.9rem', margin: 0}}>
-                    {localStorage.getItem('openrouter_api_key') 
-                      ? "AI Assistant is READY. Click the bubble in the bottom right to start chatting!" 
-                      : "Awaiting API Key. Please paste your key above to enable the AI features."}
+                    Your system is ready. The AI will initialize automatically when you first open the chat.
                   </p>
                 </div>
               </div>
