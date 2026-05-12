@@ -1,0 +1,27 @@
+services:
+  # Backend Service
+  - type: web
+    name: khakhra-backend
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_PATH
+        value: /data/orders.db
+    disk:
+      name: khakhra-db
+      mountPath: /data
+      sizeGB: 1
+
+  # Frontend Service (Optional, but good for web access)
+  - type: web
+    name: khakhra-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    publishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: khakhra-backend
+          property: host

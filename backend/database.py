@@ -1,8 +1,12 @@
+import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from .models import Base
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./orders.db"
+# Database path can be overridden by environment variable for cloud deployment
+# In Render, we can mount a disk at /data and set DATABASE_PATH=/data/orders.db
+DB_PATH = os.getenv("DATABASE_PATH", "./orders.db")
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
