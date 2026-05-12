@@ -1,7 +1,7 @@
 import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
-from .models import Base
+from models import Base
 
 # DATABASE_URL is automatically provided by Railway for PostgreSQL
 # Default to SQLite for local development if no URL is provided

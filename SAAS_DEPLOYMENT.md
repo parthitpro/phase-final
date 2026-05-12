@@ -16,8 +16,9 @@ I have upgraded your project to a professional SaaS architecture. It now support
 
 ## Step 3: Deployment Settings
 In your backend service settings on Railway:
-- **Build Command:** `pip install -r backend/requirements.txt`
-- **Start Command:** `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+- **Root Directory:** (Leave this empty/blank)
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
 
 ## Step 4: Final Link
 1. Once deployed, Railway will give you a domain (e.g., `viren-khakhra.up.railway.app`).

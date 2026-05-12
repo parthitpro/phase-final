@@ -7,7 +7,7 @@ import pandas as pd
 import os
 import datetime
 import logging
-from . import models, database, schemas
+import models, database, schemas
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

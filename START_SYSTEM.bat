@@ -26,7 +26,7 @@ echo ==========================================
 echo.
 
 echo [1/2] Starting Backend (Port 8000)...
-start "Khakhra Backend" cmd /k "python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000"
+start "Khakhra Backend" cmd /k "python -m uvicorn main:app --host 0.0.0.0 --port 8000"
 
 echo [2/2] Starting Frontend (Port 5173)...
 cd frontend
