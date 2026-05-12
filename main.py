@@ -388,6 +388,7 @@ def bulk_dispatch_delivery(order_ids: List[int], db: Session = Depends(database.
 # --- AI CHAT ---
 @app.post("/chat")
 def chat_with_ai(request: schemas.ChatRequest, db: Session = Depends(database.get_db)):
+    logger.info(f"Chat Request: model={request.model_name}, api_key_present={bool(request.api_key)}")
     try:
         # Gather live business context
         context = ai_service.get_business_context(db)

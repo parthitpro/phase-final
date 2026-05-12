@@ -1,8 +1,12 @@
 from openai import OpenAI
 import json
+import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
 import models
+
+# Configure logging for this module
+logger = logging.getLogger(__name__)
 
 def get_business_context(db: Session):
     """Gathers real-time business data to give to the AI."""
@@ -44,11 +48,30 @@ def get_business_context(db: Session):
     return json.dumps(context)
 
 def get_ai_response(api_key: str, model_name: str, messages: list, context: str):
-    """Calls OpenRouter with business context and user messages."""
+    """Calls OpenRouter with business context and user messages with automatic fallback."""
     
+    api_key = api_key.strip()
+    model_name = model_name.strip()
+    
+    # List of models to try in order of preference
+    # We include a mix of Google, Llama, and Qwen for reliability
+    fallbacks = [
+        "google/gemma-4-31b-it:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "qwen/qwen3-coder:free",
+        "z-ai/glm-4.5-air:free",
+        "liquid/lfm-2.5-1.2b-instruct:free"
+    ]
+    
+    models_to_try = [model_name]
+    for f in fallbacks:
+        if f != model_name:
+            models_to_try.append(f)
+
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=api_key,
+        max_retries=0 # Disable SDK retries to use our custom fallback logic immediately
     )
     
     system_prompt = f"""You are 'Viren's Khakhra AI', a professional business assistant for a Khakhra manufacturing shop.
@@ -65,18 +88,32 @@ CURRENT BUSINESS DATA:
 {context}
 """
     
-    # Prepare messages: System Prompt + History
     full_messages = [{"role": "system", "content": system_prompt}] + messages
     
-    try:
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=full_messages,
-            extra_headers={
-                "HTTP-Referer": "https://virens-khakhra.com", # Optional for OpenRouter
-                "X-Title": "Virens Khakhra SaaS",
-            }
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"Error from AI Service: {str(e)}"
+    last_error = "Unknown error"
+    
+    for current_model in models_to_try:
+        logger.info(f"Attempting AI request with model: {current_model}")
+        try:
+            # Set a lower timeout for each individual attempt to avoid overall hang
+            response = client.chat.completions.create(
+                model=current_model,
+                messages=full_messages,
+                extra_headers={
+                    "HTTP-Referer": "https://viren-khakhra.com", 
+                    "X-Title": "Virens Khakhra SaaS"
+                },
+                timeout=20 # 20 seconds per model
+            )
+            logger.info(f"AI Response received successfully from {current_model}")
+            return response.choices[0].message.content
+        except Exception as e:
+            last_error = str(e)
+            logger.warning(f"Model {current_model} failed: {last_error}")
+            if "401" in last_error or "403" in last_error:
+                # Auth errors shouldn't be retried with different models
+                break
+            # Continue to next model for 429, 404, 500 etc.
+            continue
+            
+    return f"AI Service Error: All attempted models failed. Last error: {last_error}"

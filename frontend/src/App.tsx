@@ -1929,16 +1929,18 @@ function App() {
                   <label>PREFERRED AI MODEL</label>
                   <select 
                     className="styled-input"
-                    value={localStorage.getItem('openrouter_model') || 'google/gemma-2-9b-it:free'}
+                    value={localStorage.getItem('openrouter_model') || 'google/gemma-4-31b-it:free'}
                     onChange={(e) => {
                       localStorage.setItem('openrouter_model', e.target.value);
                       fetchData(); // Trigger re-render
                     }}
                   >
-                    <option value="google/gemma-2-9b-it:free">Google Gemma 2 9B (Free & Smart)</option>
-                    <option value="meta-llama/llama-3-8b-instruct:free">Meta Llama 3 8B (Free & Fast)</option>
-                    <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free & Reliable)</option>
-                    <option value="openai/gpt-4o-mini">GPT-4o Mini (Pro - Requires Balance)</option>
+                    <option value="google/gemma-4-31b-it:free">Google Gemma 4 31B (Powerful)</option>
+                    <option value="google/gemma-4-26b-a4b-it:free">Google Gemma 4 26B (Vision/Video)</option>
+                    <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (Reliable)</option>
+                    <option value="qwen/qwen3-coder:free">Qwen 3 Coder (Best for Logic)</option>
+                    <option value="z-ai/glm-4.5-air:free">GLM 4.5 Air (Fast & Smart)</option>
+                    <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Legacy Free)</option>
                   </select>
                 </div>
 
