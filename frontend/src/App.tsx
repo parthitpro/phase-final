@@ -8,6 +8,8 @@ import { Timeline, VerticalTimeline } from './components/Timeline';
 import { ManufacturingPacking, AnimatedPacking, ProductAnimation, AnimatedDelivery } from './components/Manufacturing';
 import { getLocalDate, formatDisplayDate, toISODate, formatWeight } from './utils/formatters';
 
+import { ChatBubble } from './components/ChatBubble';
+
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [products, setProducts] = useState<Product[]>([]);
@@ -748,6 +750,7 @@ function App() {
             <button className={`nav-item ${activeTab === 'money' ? 'active' : ''}`} onClick={() => setActiveTab('money')} title="Ledger"><Icons.Money /> {!sidebarCollapsed && 'Ledger'}</button>
             <button className={`nav-item ${activeTab === 'export' ? 'active' : ''}`} onClick={() => setActiveTab('export')} title="Data Export"><Icons.Export /> {!sidebarCollapsed && 'Data Export'}</button>
             <button className={`nav-item ${activeTab === 'recent_log' ? 'active' : ''}`} onClick={() => setActiveTab('recent_log')} title="Activity Feed"><Icons.History /> {!sidebarCollapsed && 'Activity Feed'}</button>
+            <button className={`nav-item ${activeTab === 'ai_settings' ? 'active' : ''}`} onClick={() => setActiveTab('ai_settings')} title="AI Assistant" style={{color: 'var(--accent)'}}><Icons.Zap /> {!sidebarCollapsed && 'AI Assistant'}</button>
           </div>
         </nav>
         <div className="sidebar-footer">
@@ -760,6 +763,7 @@ function App() {
       </aside>
 
       <main className={`main-container ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <ChatBubble />
         <header className="top-bar no-print">
           <div style={{display: 'flex', alignItems: 'center', gap: '1.5rem'}}>
             <button className="btn btn-secondary" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} style={{padding: '0.6rem', borderRadius: '8px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
@@ -1888,6 +1892,68 @@ function App() {
         {activeTab === 'export' && (
           <div className="export-page" style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
             <div className="card"><div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}><h3 style={{margin: 0}}>Daily Export & Orders Preview</h3><div className="input-group" style={{width: '250px'}}><label>Filter by Date</label><input type="date" className="styled-input" value={exportDate} onChange={e => setExportDate(e.target.value)} /></div></div><div className="table-responsive"><table className="data-table"><thead><tr><th>ID</th><th>Customer</th><th>Summary</th><th>Amount</th><th>Status</th></tr></thead><tbody>{filteredExportOrders.map(o => (<tr key={o.id}><td>#{o.id}</td><td style={{fontWeight: 700}}>{(o.summary_text || '').split(' ->>')[0]}</td><td style={{fontSize: '0.85rem'}}>{(o.summary_text || '').split('->>')[1] || ''}</td><td style={{fontWeight: 800}}>₹{o.total_amount}</td><td><span className="badge" style={{background: o.payment_status === 'Debt' ? '#fff5f5' : 'var(--accent-soft)', color: o.payment_status === 'Debt' ? 'var(--danger)' : 'var(--accent)'}}>{o.payment_status}</span></td></tr>))}{filteredExportOrders.length === 0 && <tr><td colSpan={5} style={{textAlign: 'center', padding: '3rem', color: 'var(--text-muted)'}}>No orders found for this date.</td></tr>}</tbody></table></div><div style={{display: 'flex', gap: '1rem', marginTop: '2rem'}}><button className="btn btn-primary" onClick={() => window.open(api.getExportUrl(exportDate))} disabled={filteredExportOrders.length === 0}>DOWNLOAD EXCEL (.XLSX)</button><button className="btn btn-secondary" onClick={() => window.print()}>PRINT PREVIEW PAGE</button></div></div>
+          </div>
+        )}
+
+        {activeTab === 'ai_settings' && (
+          <div className="ai-settings-page" style={{maxWidth: '800px', margin: '0 auto'}}>
+            <div className="card" style={{padding: '3rem'}}>
+              <div style={{textAlign: 'center', marginBottom: '3rem'}}>
+                <div style={{width: 80, height: 80, background: 'var(--accent-soft)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', margin: '0 auto 1.5rem'}}>
+                  <Icons.Zap size={40} />
+                </div>
+                <h2 style={{fontSize: '2rem', marginBottom: '0.5rem'}}>AI Assistant Engine</h2>
+                <p style={{color: 'var(--text-muted)'}}>Configure your smart business analyst powered by OpenRouter.</p>
+              </div>
+
+              <div style={{display: 'flex', flexDirection: 'column', gap: '2.5rem'}}>
+                <div className="input-group">
+                  <label style={{display: 'flex', justifyContent: 'space-between'}}>
+                    OPENROUTER API KEY
+                    <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" style={{fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 800}}>GET KEY HERE →</a>
+                  </label>
+                  <input 
+                    type="password" 
+                    className="styled-input" 
+                    placeholder="sk-or-v1-..."
+                    value={localStorage.getItem('openrouter_api_key') || ''}
+                    onChange={(e) => {
+                      localStorage.setItem('openrouter_api_key', e.target.value);
+                      fetchData(); // Trigger re-render
+                    }}
+                  />
+                  <p style={{fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem'}}>Your key is saved locally in your browser and never sent to our servers.</p>
+                </div>
+
+                <div className="input-group">
+                  <label>PREFERRED AI MODEL</label>
+                  <select 
+                    className="styled-input"
+                    value={localStorage.getItem('openrouter_model') || 'google/gemma-2-9b-it:free'}
+                    onChange={(e) => {
+                      localStorage.setItem('openrouter_model', e.target.value);
+                      fetchData(); // Trigger re-render
+                    }}
+                  >
+                    <option value="google/gemma-2-9b-it:free">Google Gemma 2 9B (Free & Smart)</option>
+                    <option value="meta-llama/llama-3-8b-instruct:free">Meta Llama 3 8B (Free & Fast)</option>
+                    <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free & Reliable)</option>
+                    <option value="openai/gpt-4o-mini">GPT-4o Mini (Pro - Requires Balance)</option>
+                  </select>
+                </div>
+
+                <div className="customer-info-card" style={{background: 'var(--success-soft)', borderLeft: '4px solid var(--success)', padding: '1.5rem'}}>
+                  <h4 style={{margin: '0 0 0.5rem 0', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                    <Icons.CheckCircle size={18} /> SYSTEM STATUS
+                  </h4>
+                  <p style={{fontSize: '0.9rem', margin: 0}}>
+                    {localStorage.getItem('openrouter_api_key') 
+                      ? "AI Assistant is READY. Click the bubble in the bottom right to start chatting!" 
+                      : "Awaiting API Key. Please paste your key above to enable the AI features."}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

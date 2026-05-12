@@ -77,3 +77,12 @@ class Order(BaseModel):
     logs: List[OrderLog]
     class Config:
         from_attributes = True
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+    api_key: str
+    model_name: str

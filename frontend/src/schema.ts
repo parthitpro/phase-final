@@ -47,4 +47,9 @@ export interface Customer {
   notes?: string;
 }
 
-export type Tab = 'dashboard' | 'history' | 'manage' | 'products' | 'analytics' | 'export' | 'money' | 'customers' | 'product_analysis' | 'manufacturing' | 'delivery' | 'recent_log' | 'exp_1';
+export type Tab = 'dashboard' | 'history' | 'manage' | 'products' | 'analytics' | 'export' | 'money' | 'customers' | 'product_analysis' | 'manufacturing' | 'delivery' | 'recent_log' | 'exp_1' | 'ai_settings';
+
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}

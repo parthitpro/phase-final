@@ -8,6 +8,7 @@ import os
 import datetime
 import logging
 import models, database, schemas
+import ai_service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -383,3 +384,26 @@ def bulk_dispatch_delivery(order_ids: List[int], db: Session = Depends(database.
         add_order_log(db, o.id, "Out for Delivery", "Order dispatched for delivery")
     db.commit()
     return {"message": f"{len(orders)} orders out for delivery"}
+
+# --- AI CHAT ---
+@app.post("/chat")
+def chat_with_ai(request: schemas.ChatRequest, db: Session = Depends(database.get_db)):
+    try:
+        # Gather live business context
+        context = ai_service.get_business_context(db)
+        
+        # Format messages for OpenAI SDK
+        messages = [{"role": m.role, "content": m.content} for m in request.messages]
+        
+        # Get response from AI
+        response = ai_service.get_ai_response(
+            api_key=request.api_key,
+            model_name=request.model_name,
+            messages=messages,
+            context=context
+        )
+        
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"Chat API Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
