@@ -20,7 +20,7 @@ export const ChatBubble: React.FC = () => {
   }, [messages, isOpen, progress]);
 
   const initEngine = async () => {
-    if (isInitializing) return;
+    if (isInitializing || webLLM.isInitialized()) return;
 
     // Check for WebGPU
     if (!navigator.gpu) {
@@ -38,24 +38,25 @@ export const ChatBubble: React.FC = () => {
         const percent = percentMatch ? parseInt(percentMatch[1]) : 0;
         setProgress({ text: report.text, percent });
       });
+      // Small delay to ensure WebGPU buffers are fully settled
+      await new Promise(r => setTimeout(r, 500));
       setProgress(null);
     } catch (err: unknown) {
       setMessages(prev => [...prev, { role: 'assistant', content: `❌ Initialization Error: ${(err as Error).message}` }]);
+      webLLM.unload(); // Clean up on failure
     } finally {
       setIsInitializing(false);
     }
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || isInitializing) return;
 
     // Initialize on first message if not already done
     if (!webLLM.isInitialized()) {
-      if (!isInitializing) {
-        await initEngine();
-      }
-      // If initialization is still in progress (downloading), wait
-      if (isInitializing || progress) return;
+      await initEngine();
+      // If we just started initializing or it's still downloading, don't proceed with chat
+      if (!webLLM.isInitialized()) return;
     }
 
     const userMessage: ChatMessage = { role: 'user', content: input };
