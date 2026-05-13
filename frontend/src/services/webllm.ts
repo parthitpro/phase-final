@@ -61,6 +61,14 @@ class WebLLMService {
       }
 
       return fullText;
+    } catch (error: any) {
+      // If we hit a fatal WebGPU error, reset the engine
+      if (error.message?.includes("GPUBuffer") || error.message?.includes("unmapped")) {
+        console.error("Fatal WebGPU error detected. Resetting engine state.");
+        this.engine = null;
+        this.initPromise = null;
+      }
+      throw error;
     } finally {
       this.isProcessing = false;
     }

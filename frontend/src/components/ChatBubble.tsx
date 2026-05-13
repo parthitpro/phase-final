@@ -131,7 +131,10 @@ Full Context JSON: ${JSON.stringify(contextData)}`;
       });
 
     } catch (err: unknown) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `❌ AI Error: ${(err as Error).message}` }]);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `❌ AI Error: ${(err as Error).message}. You can try to reload the AI engine below.` 
+      }]);
     } finally {
       setIsLoading(false);
     }
