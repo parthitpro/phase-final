@@ -1,5 +1,4 @@
 import requests
-import json
 
 def list_models():
     url = "https://openrouter.ai/api/v1/models"

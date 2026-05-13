@@ -1,6 +1,5 @@
-from backend.database import SessionLocal, engine
-from backend.models import Base, Product, Customer, Order, OrderItem, OrderLog
-import os
+from backend.database import SessionLocal
+from backend.models import Customer, Order, OrderItem, OrderLog
 
 def reset_database():
     print("WARNING: This will delete transactional data (Orders, Customers, Logs).")

@@ -39,8 +39,8 @@ export const ChatBubble: React.FC = () => {
         setProgress({ text: report.text, percent });
       });
       setProgress(null);
-    } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `❌ Initialization Error: ${err.message}` }]);
+    } catch (err: unknown) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `❌ Initialization Error: ${(err as Error).message}` }]);
     } finally {
       setIsInitializing(false);
     }
@@ -79,7 +79,7 @@ Your goal is to help Viren manage orders, debts, and manufacturing efficiently.
 
 CURRENT BUSINESS STATE:
 - Outstanding Debt: ₹${contextData.total_outstanding_debt}
-- Recent Debtors: ${contextData.debt_details.slice(0, 5).map((d: any) => `${d.customer} (₹${d.amount})`).join(', ')}
+- Recent Debtors: ${contextData.debt_details.slice(0, 5).map((d: {customer: string, amount: number}) => `${d.customer} (₹${d.amount})`).join(', ')}
 - Product Catalog: ${contextData.product_catalog.length} items available.
 - Recent Activity: ${contextData.recent_activity.length} recent orders tracked.
 
@@ -110,8 +110,8 @@ Full Context JSON: ${JSON.stringify(contextData)}`;
         });
       });
 
-    } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `❌ AI Error: ${err.message}` }]);
+    } catch (err: unknown) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `❌ AI Error: ${(err as Error).message}` }]);
     } finally {
       setIsLoading(false);
     }

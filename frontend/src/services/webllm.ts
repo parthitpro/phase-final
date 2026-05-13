@@ -1,6 +1,6 @@
 import { CreateMLCEngine, MLCEngine } from "@mlc-ai/web-llm";
 
-export type ProgressCallback = (report: any) => void;
+export type ProgressCallback = (report: { text: string }) => void;
 
 class WebLLMService {
   private engine: MLCEngine | null = null;

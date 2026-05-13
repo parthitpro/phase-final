@@ -1,7 +1,6 @@
 import pandas as pd
-from sqlalchemy.orm import Session
 from backend.database import SessionLocal, engine
-from backend.models import Base, Product, Customer, Order, OrderItem
+from backend.models import Base, Product
 import os
 
 def seed_data(file_path):
@@ -37,7 +36,7 @@ def seed_data(file_path):
             try:
                 w_price = float(wholesale_price) if not pd.isna(wholesale_price) else 0.0
                 r_price = float(retail_price) if not pd.isna(retail_price) else 0.0
-            except:
+            except Exception:
                 w_price = 0.0
                 r_price = 0.0
 

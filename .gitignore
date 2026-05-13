@@ -1,6 +1,7 @@
 # Database
 orders.db
 *.db
+backups/
 
 # Python
 __pycache__/

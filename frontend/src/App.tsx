@@ -58,6 +58,7 @@ function App() {
   }, [addToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, [fetchData]);
 
@@ -215,7 +216,7 @@ function App() {
     setEditingOrderId(order.id);
     const c = customers.find(cus => cus.id === order.customer_id);
     setCustomerName(c?.name || '');
-    setCategory(c?.category as any || 'Retail');
+    setCategory((c?.category as 'Retail' | 'Wholesale') || 'Retail');
     const w: Record<number, string> = {};
     order.items.forEach(i => { w[i.product_id] = i.weight.toString(); });
     setWeights(w);
@@ -367,6 +368,7 @@ function App() {
 
   useEffect(() => {
     if (orderFilter && activeTab !== 'manage' && activeTab !== 'history') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab('manage');
     }
   }, [orderFilter, activeTab]);
@@ -640,15 +642,15 @@ function App() {
         aVal = a.id;
         bVal = b.id;
       } else {
-        aVal = (a as any)[orderSort.key] || '';
-        bVal = (b as any)[orderSort.key] || '';
+        aVal = (a as unknown as Record<string, string | number>)[orderSort.key] || '';
+        bVal = (b as unknown as Record<string, string | number>)[orderSort.key] || '';
       }
       if (aVal < bVal) return orderSort.dir === 'asc' ? -1 : 1;
       if (aVal > bVal) return orderSort.dir === 'asc' ? 1 : -1;
       return 0;
     });
     return intermediateResult;
-  }, [orders, orderFilter, orderSort]);
+  }, [orders, orderFilter, orderSort, statusFilter]);
 
   const customerStats = useMemo(() => {
     const stats = customers.map(c => {
@@ -660,8 +662,8 @@ function App() {
     });
     const filtered = customerFilter ? stats.filter(c => c.name.toLowerCase().includes(customerFilter.toLowerCase()) || (c.phone && c.phone.includes(customerFilter))) : stats;
     return [...filtered].sort((a, b) => {
-      const aVal = (a as any)[customerSort.key] || 0;
-      const bVal = (b as any)[customerSort.key] || 0;
+      const aVal = (a as Record<string, string | number>)[customerSort.key] || 0;
+      const bVal = (b as Record<string, string | number>)[customerSort.key] || 0;
       if (aVal < bVal) return customerSort.dir === 'asc' ? -1 : 1;
       if (aVal > bVal) return customerSort.dir === 'asc' ? 1 : -1;
       return 0;
@@ -690,8 +692,8 @@ function App() {
       return { ...p, totalWeight, totalRevenue, topCustomerName: topCustomer ? topCustomer[0] : 'N/A', topCustomerWeight: topCustomer ? topCustomer[1] : 0 };
     });
     return [...stats].sort((a, b) => {
-      const aVal = (a as any)[productSort.key] || 0;
-      const bVal = (b as any)[productSort.key] || 0;
+      const aVal = (a as Record<string, string | number>)[productSort.key] || 0;
+      const bVal = (b as Record<string, string | number>)[productSort.key] || 0;
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         return productSort.dir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       }

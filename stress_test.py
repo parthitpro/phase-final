@@ -59,7 +59,7 @@ def run_stress_test():
     for o in orders:
         if "AgentX" in o['summary_text']:
             if o['order_status'] == 'Delivered':
-                log_statuses = [l['status_reached'] for l in o['logs']]
+                log_statuses = [log_item['status_reached'] for log_item in o['logs']]
                 if 'Delivered' not in log_statuses:
                     unlogged_delivered += 1
     

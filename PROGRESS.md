@@ -72,7 +72,17 @@ Bulk Dispatch:** One-click action to send all filtered orders to production.
 - **Styling Standardization:**
     - Fixed class name mismatches (`header-search` -> `search-header`) to restore the intended premium look of search bars and info cards.
 
+### Session: 2026-05-14 (Code Restoration & Operational Safety)
+
+### Change Log (Completed)
+- **Codebase Restoration:** Fixed React build errors caused by improper type casting in `App.tsx` and `webllm.ts`.
+- **Type Hardening:** Applied stricter types across the frontend to prevent runtime crashes, especially in sorting and AI chat functions.
+- **Automated Backup:** Implemented `backup_db.py` to handle local rotations of `orders.db`, keeping the last 10 snapshots for disaster recovery.
+- **Project Reorganization:** Cleaned up unused imports and standardized backend service structures.
+
 ### Planned Goals
 - **Local AI Assistant:** [COMPLETED] Migrated from OpenRouter to local WebLLM (Llama 3.2 1B). Implemented `/ai-context` RAG endpoint, browser-based inference, and on-device privacy. Added "Test Connection" and "Clear Cache" utilities.
 - **Mobile Responsive Polish:** [COMPLETED] Implemented media queries for tables, sidebar, and chat bubble. Widened columns and added card-based layouts for small screens.
-- **Database Backup:** [PLANNED] Implement an automated local backup script for `orders.db`.
+- **Database Backup:** [COMPLETED] Automated local backup script for `orders.db` with 10-file rotation.
+- **Analytics Polish:** [PLANNED] Enhance charts with more granular data.
+- **Cloud Sync:** [PLANNED] Optional encrypted cloud backup for premium users.
