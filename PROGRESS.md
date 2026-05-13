@@ -73,6 +73,6 @@ Bulk Dispatch:** One-click action to send all filtered orders to production.
     - Fixed class name mismatches (`header-search` -> `search-header`) to restore the intended premium look of search bars and info cards.
 
 ### Planned Goals
-- **Mobile Responsive Polish:** [IN PROGRESS] Table columns widened for readability; further mobile-first tweaks planned.
-- **Order Timeline:** [RE-COMPLETED] Synchronized hierarchy-based logic implemented.
-- **Database Backup:** Implement an automated local backup script for `orders.db`.
+- **Local AI Assistant:** [COMPLETED] Migrated from OpenRouter to local WebLLM (Llama 3.2 1B). Implemented `/ai-context` RAG endpoint, browser-based inference, and on-device privacy. Added "Test Connection" and "Clear Cache" utilities.
+- **Mobile Responsive Polish:** [COMPLETED] Implemented media queries for tables, sidebar, and chat bubble. Widened columns and added card-based layouts for small screens.
+- **Database Backup:** [PLANNED] Implement an automated local backup script for `orders.db`.

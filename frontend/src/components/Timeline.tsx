@@ -6,8 +6,14 @@ const statusHierarchy = [
   { label: 'Baking', icon: <Icons.Flame />, value: 'In Manufacturing' },
   { label: 'Packed', icon: <Icons.Bag />, value: 'Ready for Delivery' },
   { label: 'Shipping', icon: <Icons.Delivery />, value: 'Out for Delivery' },
-  { label: 'Delivered', icon: <Icons.Check />, value: 'Delivered' }
+  { label: 'Delivered', icon: <Icons.Check />, value: 'Delivered' },
+  { label: 'Settlement', icon: <Icons.Money />, value: 'Paid' }
 ];
+
+const formatLogTime = (timestamp: string) => {
+  const d = new Date(timestamp);
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
 export const VerticalTimeline = ({ order }: { order: Order }) => {
   const iconStyle = { width: 14, height: 14 };
@@ -18,47 +24,77 @@ export const VerticalTimeline = ({ order }: { order: Order }) => {
   if (isCancelled) return <div className="badge danger" style={{padding: '1rem', borderRadius: '12px'}}><Icons.Ban style={{marginRight: '8px'}} /> ORDER CANCELLED</div>;
 
   const currentRank = statusHierarchy.findIndex(s => s.value === currentStatus);
+  const isPaid = order.payment_status === 'Cash' || order.payment_status === 'UPI';
+  const isDebt = order.payment_status === 'Debt';
+  const isSettled = isPaid || isDebt;
 
   return (
     <div className="vertical-log-timeline">
       {statusHierarchy.map((s, idx) => {
-        const logEntry = logs.find(l => l.status_reached === s.value);
-        const isActive = currentStatus === s.value;
-        const isCompleted = currentRank > idx || currentStatus === 'Delivered';
+        let logEntry = logs.find(l => l.status_reached === s.value);
+        if (s.value === 'Paid') {
+          logEntry = logs.find(l => l.status_reached === 'Paid' || l.status_reached === 'Debt');
+        }
+
+        // Fallback for Delivered timestamp if forced by payment
+        let displayTime = '';
+        if (logEntry) {
+          displayTime = formatLogTime(logEntry.timestamp);
+        } else if (s.value === 'Delivered' && isSettled && order.payment_date) {
+          displayTime = formatLogTime(order.payment_date);
+        } else if (s.value === 'Paid' && isSettled && order.payment_date) {
+           displayTime = formatLogTime(order.payment_date);
+        }
+
+        const isCompleted = (currentRank > idx) || (isSettled && s.value !== 'Paid') || (s.value === 'Paid' && isPaid);
+        const isActive = (currentStatus === s.value && !isSettled) || (s.value === 'Paid' && isDebt);
         const isFuture = !isActive && !isCompleted;
 
         return (
-          <div key={s.label} className={`log-entry-v ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''} ${isFuture ? 'future' : ''}`}>
+          <div key={s.label} className={`log-entry-v ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''} ${isFuture ? 'future' : ''} ${s.value === 'Paid' && isDebt ? 'debt-step' : ''}`}>
             <div className="log-visual-v">
-              <div className="log-dot-v">
+              <div className="log-dot-v" style={{ 
+                background: (s.value === 'Paid' && isPaid) ? 'var(--success)' : (s.value === 'Paid' && isDebt) ? 'var(--danger)' : undefined,
+                borderColor: (s.value === 'Paid' && isPaid) ? 'var(--success)' : (s.value === 'Paid' && isDebt) ? 'var(--danger)' : undefined,
+                color: (s.value === 'Paid' && (isPaid || isDebt)) ? 'white' : undefined
+              }}>
                 {isCompleted ? <Icons.CheckCircle style={iconStyle} /> : 
+                 (s.value === 'Paid' && isDebt) ? <Icons.Alert style={iconStyle} /> :
                  isActive ? (s.value === 'In Manufacturing' ? <Icons.Flame style={iconStyle} /> : 
                             s.value === 'Ready for Delivery' ? <Icons.Bag style={iconStyle} /> : 
                             s.value === 'Out for Delivery' ? <Icons.Delivery style={iconStyle} /> :
-                            s.value === 'Delivered' ? <Icons.Check style={iconStyle} /> :
+                            s.value === 'Delivered' ? <Icons.CheckCircle style={{...iconStyle, color: 'var(--success)'}} /> :
                             <Icons.Orders style={iconStyle} />) : 
                  (s.value === 'In Manufacturing' ? <Icons.Flame style={iconStyle} /> : 
                   s.value === 'Ready for Delivery' ? <Icons.Bag style={iconStyle} /> : 
                   s.value === 'Out for Delivery' ? <Icons.Delivery style={iconStyle} /> :
                   s.value === 'Delivered' ? <Icons.Check style={iconStyle} /> :
+                  s.value === 'Paid' ? <Icons.Money style={iconStyle} /> :
                   <Icons.Orders style={iconStyle} />)}
               </div>
               {idx < statusHierarchy.length - 1 && <div className="log-connector-v"></div>}
             </div>
             <div className="log-content-v">
               <div className="log-header-v">
-                <span className="log-status-text-v" style={{color: isActive ? 'var(--accent)' : isCompleted ? 'var(--success)' : 'var(--text-muted)'}}>{s.label}</span>
-                {logEntry && (
+                <span className="log-status-text-v" style={{
+                  color: (s.value === 'Paid' && isPaid) ? 'var(--success)' : (s.value === 'Paid' && isDebt) ? 'var(--danger)' : isActive ? 'var(--accent)' : isCompleted ? 'var(--success)' : 'var(--text-muted)',
+                  fontWeight: (isActive || isCompleted) ? 800 : 500
+                }}>
+                  {s.value === 'Paid' ? (isDebt ? 'Debt Recorded' : isPaid ? 'Payment Received' : 'Settlement Pending') : s.label} 
+                  {(isCompleted || isActive) && s.value === 'Delivered' && ' ✓'}
+                  {isPaid && s.value === 'Paid' && ' ✓'}
+                </span>
+                {displayTime && (
                   <span className="log-time-text-v">
-                    {new Date(logEntry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {displayTime}
                   </span>
                 )}
               </div>
               {logEntry && logEntry.description && (
                 <div className="log-desc-text-v">{logEntry.description}</div>
               )}
-              {isActive && !logEntry && (
-                <div className="log-desc-text-v" style={{color: 'var(--accent)', fontStyle: 'italic'}}>Processing...</div>
+              {isActive && !displayTime && s.value !== 'Paid' && (
+                <div className="log-desc-text-v" style={{color: 'var(--accent)', fontStyle: 'italic'}}>Current Stage</div>
               )}
             </div>
           </div>
@@ -70,6 +106,7 @@ export const VerticalTimeline = ({ order }: { order: Order }) => {
 
 export const HorizontalTimeline = ({ order }: { order: Order }) => {
   const currentStatus = order.order_status;
+  const logs = order.logs || [];
   
   if (currentStatus === 'Cancelled') {
     return (
@@ -80,19 +117,28 @@ export const HorizontalTimeline = ({ order }: { order: Order }) => {
   }
 
   const currentRank = statusHierarchy.findIndex(s => s.value === currentStatus);
-  const progress = currentRank === -1 ? 0 : (currentRank / (statusHierarchy.length - 1)) * 100;
+  const isPaid = order.payment_status === 'Cash' || order.payment_status === 'UPI';
+  const isDebt = order.payment_status === 'Debt';
+  const isSettled = isPaid || isDebt;
+  
+  const totalSteps = statusHierarchy.length - 1;
+  let effectiveRank = currentRank;
+  if (isPaid) effectiveRank = totalSteps; 
+  else if (isDebt) effectiveRank = totalSteps;
+  
+  const progress = effectiveRank === -1 ? 0 : (effectiveRank / totalSteps) * 100;
 
   return (
-    <div className="horizontal-timeline-mini" style={{minWidth: '280px'}}>
+    <div className="horizontal-timeline-mini" style={{minWidth: '350px'}}>
       <div className="timeline-track-container" style={{ padding: '0 12px', position: 'relative', marginBottom: '1.25rem' }}>
         <div className="timeline-track" style={{ height: '4px', background: 'var(--border)', borderRadius: '10px', position: 'relative' }}>
           <div className="timeline-progress" style={{
             position: 'absolute', left: 0, top: 0, height: '100%',
             width: `${progress}%`,
-            background: 'var(--success)',
+            background: isDebt ? 'var(--danger)' : 'var(--success)',
             borderRadius: '10px',
             transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 0 10px rgba(16, 185, 129, 0.2)'
+            boxShadow: `0 0 10px ${isDebt ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`
           }} />
           
           <div className="timeline-steps" style={{
@@ -100,21 +146,23 @@ export const HorizontalTimeline = ({ order }: { order: Order }) => {
             top: '50%', left: '-12px', right: '-12px', transform: 'translateY(-50%)'
           }}>
             {statusHierarchy.map((s, idx) => {
-              const isCompleted = currentRank > idx || currentStatus === 'Delivered';
-              const isActive = currentStatus === s.value;
+              const isStepCompleted = (currentRank > idx) || (isSettled && s.value !== 'Paid') || (s.value === 'Paid' && isPaid);
+              const isStepActive = (currentStatus === s.value && !isSettled) || (s.value === 'Paid' && isDebt);
+              const isStepDebt = s.value === 'Paid' && isDebt;
               
               return (
-                <div key={s.label} className={isActive ? 'anim-pulse' : ''} style={{
+                <div key={s.label} className={isStepActive ? 'anim-pulse' : ''} style={{
                   width: '24px', height: '24px', borderRadius: '50%',
-                  background: isCompleted ? 'var(--success)' : 'var(--card-bg)',
-                  border: `2px solid ${isCompleted ? 'var(--success)' : isActive ? 'var(--accent)' : 'var(--border)'}`,
+                  background: isStepDebt ? 'var(--danger)' : isStepCompleted ? 'var(--success)' : 'var(--card-bg)',
+                  border: `2px solid ${isStepDebt ? 'var(--danger)' : isStepCompleted ? 'var(--success)' : isStepActive ? 'var(--accent)' : 'var(--border)'}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: isCompleted ? 'white' : isActive ? 'var(--accent)' : 'var(--text-muted)',
+                  color: (isStepCompleted || isStepDebt) ? 'white' : isStepActive ? 'var(--accent)' : 'var(--text-muted)',
                   zIndex: 2, transition: 'all 0.4s',
-                  boxShadow: isActive ? '0 0 12px var(--accent-soft)' : 'none'
+                  boxShadow: isStepActive ? '0 0 12px var(--accent-soft)' : 'none'
                 }}>
-                  {isCompleted ? <Icons.Check style={{width: 12, height: 12}} /> : 
-                   isActive ? <div style={{width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%'}} /> :
+                  {isStepCompleted ? <Icons.Check style={{width: 12, height: 12}} /> : 
+                   isStepDebt ? <Icons.Alert style={{width: 12, height: 12}} /> :
+                   isStepActive ? <div style={{width: 6, height: 6, background: 'var(--accent)', borderRadius: '50%'}} /> :
                    <div style={{width: 4, height: 4, background: 'var(--border)', borderRadius: '50%'}} />}
                 </div>
               );
@@ -125,21 +173,50 @@ export const HorizontalTimeline = ({ order }: { order: Order }) => {
       
       <div className="timeline-labels" style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px' }}>
         {statusHierarchy.map((s, idx) => {
-          const isCompleted = currentRank > idx || currentStatus === 'Delivered';
-          const isActive = currentStatus === s.value;
+          const isStepCompleted = (currentRank > idx) || (isSettled && s.value !== 'Paid') || (s.value === 'Paid' && isPaid);
+          const isStepActive = (currentStatus === s.value && !isSettled) || (s.value === 'Paid' && isDebt);
+          const isStepDebt = s.value === 'Paid' && isDebt;
+          
+          let logEntry = logs.find(l => l.status_reached === s.value);
+          if (s.value === 'Paid') {
+            logEntry = logs.find(l => l.status_reached === 'Paid' || l.status_reached === 'Debt');
+          }
+          
+          let displayTime = '';
+          if (logEntry) {
+            displayTime = formatLogTime(logEntry.timestamp);
+          } else if (s.value === 'Delivered' && isSettled && order.payment_date) {
+            displayTime = formatLogTime(order.payment_date);
+          } else if (s.value === 'Paid' && isSettled && order.payment_date) {
+            displayTime = formatLogTime(order.payment_date);
+          }
+          
           return (
-            <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '45px' }}>
+            <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '55px' }}>
               <span style={{
                 fontSize: '0.6rem',
-                fontWeight: isActive ? 900 : 700,
-                color: isActive ? 'var(--accent)' : isCompleted ? 'var(--success)' : 'var(--text-muted)',
+                fontWeight: (isStepActive || isStepCompleted) ? 900 : 700,
+                color: isStepDebt ? 'var(--danger)' : isStepActive ? 'var(--accent)' : isStepCompleted ? 'var(--success)' : 'var(--text-muted)',
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
                 transition: 'color 0.3s',
-                opacity: (isActive || isCompleted) ? 1 : 0.6
+                opacity: (isStepActive || isStepCompleted) ? 1 : 0.6
               }}>
-                {s.label}
+                {s.value === 'Paid' ? (isStepDebt ? 'DEBT' : 'PAID') : s.label}
               </span>
+              {(isStepActive || isStepCompleted) && displayTime && (
+                <span style={{
+                  fontSize: '0.55rem',
+                  fontWeight: 600,
+                  color: 'var(--text-muted)',
+                  marginTop: '2px',
+                  opacity: 0.8,
+                  textAlign: 'center',
+                  lineHeight: 1.1
+                }}>
+                  {displayTime}
+                </span>
+              )}
             </div>
           );
         })}

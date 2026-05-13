@@ -1,6 +1,6 @@
-import { CreateMLCEngine, MLCEngine, InitProgressReport } from "@mlc-ai/web-llm";
+import { CreateMLCEngine, MLCEngine } from "@mlc-ai/web-llm";
 
-export type ProgressCallback = (report: InitProgressReport) => void;
+export type ProgressCallback = (report: any) => void;
 
 class WebLLMService {
   private engine: MLCEngine | null = null;
@@ -49,6 +49,10 @@ class WebLLMService {
       await this.engine.unload();
       this.engine = null;
     }
+  }
+
+  isInitialized() {
+    return this.engine !== null;
   }
 
   getModelName() {

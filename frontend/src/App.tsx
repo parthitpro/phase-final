@@ -445,13 +445,24 @@ function App() {
     return d === exportDate;
   }).reverse(), [orders, exportDate]);
 
-  const receivedToday = useMemo(() => {
+  const cashToday = useMemo(() => {
     const today = getLocalDate();
-    return orders.filter(o => {
-      if (!o.payment_date) return false;
-      const d = toISODate(o.payment_date);
-      return d === today && (o.payment_status === 'Cash' || o.payment_status === 'UPI');
-    });
+    return orders
+      .filter(o => {
+        if (!o.payment_date) return false;
+        return toISODate(o.payment_date) === today && o.payment_status === 'Cash';
+      })
+      .sort((a, b) => new Date(b.payment_date!).getTime() - new Date(a.payment_date!).getTime());
+  }, [orders]);
+
+  const upiToday = useMemo(() => {
+    const today = getLocalDate();
+    return orders
+      .filter(o => {
+        if (!o.payment_date) return false;
+        return toISODate(o.payment_date) === today && o.payment_status === 'UPI';
+      })
+      .sort((a, b) => new Date(b.payment_date!).getTime() - new Date(a.payment_date!).getTime());
   }, [orders]);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
@@ -517,15 +528,13 @@ function App() {
 
   const deliveredAndCash = async (orderId: number) => {
     try {
-      // Step 1: Mark as Delivered
-      const res1 = await api.updateOrderStatus(orderId, 'Delivered', 'Delivered via Express Tab');
-      if (res1 && !res1.detail) {
-        // Step 2: Mark as Cash Paid
-        const res2 = await api.approvePayment(orderId);
-        if (res2 && !res2.detail) {
-          addToast("Delivered & Cash Collected!");
-          fetchData();
-        }
+      // Atomic update for both status and payment via backend logic
+      const res = await api.updateOrder(orderId, { payment_status: 'Cash' });
+      if (res && !res.detail) {
+        addToast("Delivered & Cash Collected!");
+        fetchData();
+      } else {
+        addToast(res?.detail || "Operation failed", "error");
       }
     } catch { addToast("Operation failed", "error"); }
   };
@@ -763,7 +772,6 @@ function App() {
       </aside>
 
       <main className={`main-container ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <ChatBubble />
         <header className="top-bar no-print">
           <div style={{display: 'flex', alignItems: 'center', gap: '1.5rem'}}>
             <button className="btn btn-secondary" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} style={{padding: '0.6rem', borderRadius: '8px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
@@ -946,7 +954,89 @@ function App() {
             <div className="chronicle-sidebar"><div className="card" style={{padding: '1rem', height: 'calc(100vh - 180px)', overflowY: 'auto', position: 'sticky', top: '100px'}}><h3 style={{fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem'}}>Select Date</h3><div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>{Array.from(new Set(orders.map(o => toISODate(o.date)))).sort().reverse().map(date => (<button key={date} className={`btn ${chronicleDate === date ? 'btn-primary' : 'btn-secondary'}`} style={{textAlign: 'left', justifyContent: 'flex-start', fontSize: '0.85rem', padding: '0.75rem 1rem'}} onClick={() => setChronicleDate(date)}>{formatDisplayDate(date)}</button>))}</div></div></div>
             <div className="chronicle-content" style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
               <div className="chronicle-hero-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem'}}><div className="card" style={{borderTop: '5px solid var(--accent)', textAlign: 'center', padding: '1.5rem'}}><div style={{marginBottom: '0.5rem'}}><Icons.Orders style={{width: 32, height: 32, color: 'var(--accent)', margin: '0 auto'}} /></div><div style={{fontSize: '1.5rem', fontWeight: 900}}>{chronicleData.dayOrders.length}</div><div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Orders Received</div></div><div className="card" style={{borderTop: '5px solid var(--success)', textAlign: 'center', padding: '1.5rem'}}><div style={{marginBottom: '0.5rem'}}><Icons.Money style={{width: 32, height: 32, color: 'var(--success)', margin: '0 auto'}} /></div><div style={{fontSize: '1.5rem', fontWeight: 900, color: 'var(--success)'}}>₹{chronicleData.totalMoney.toLocaleString()}</div><div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Money Collected</div></div><div className="card" style={{borderTop: '5px solid var(--danger)', textAlign: 'center', padding: '1.5rem'}}><div style={{marginBottom: '0.5rem'}}><Icons.Alert style={{width: 32, height: 32, color: 'var(--danger)', margin: '0 auto'}} /></div><div style={{fontSize: '1.5rem', fontWeight: 900, color: 'var(--danger)'}}>₹{chronicleData.newDebt.toLocaleString()}</div><div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>New Debt Accrued</div></div></div>
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem', alignItems: 'start'}}><div style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}><div className="card"><h3 style={{marginTop: 0, marginBottom: '1.5rem', fontSize: '1.1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem'}}><Icons.Orders style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '8px'}} /> Orders Received Today</h3><div className="table-responsive"><table className="data-table"><thead><tr><th>ID</th><th>Customer</th><th>Items</th><th style={{textAlign: 'right'}}>Amount</th></tr></thead><tbody>{chronicleData.dayOrders.map(o => (<tr key={o.id}><td>#{o.id}</td><td style={{fontWeight: 700}}>{(o.summary_text || '').split(' ->>')[0]}</td><td style={{fontSize: '0.8rem', maxWidth: '300px'}}>{(o.summary_text || '').split('->>')[1] || ''}</td><td style={{textAlign: 'right', fontWeight: 800}}>₹{o.total_amount}</td></tr>))}{chronicleData.dayOrders.length === 0 && <tr><td colSpan={4} style={{textAlign: 'center', padding: '2rem', color: 'var(--text-muted)'}}>No orders placed on this day.</td></tr>}</tbody></table></div></div><div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem'}}><div className="card" style={{background: 'var(--success-soft)', padding: '1.25rem'}}><h3 style={{marginTop: 0, fontSize: '1rem', color: 'var(--success)', marginBottom: '1rem'}}><Icons.Money style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '8px'}} /> Payments Collected</h3><div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>{chronicleData.dayPayments.map(o => (<div key={o.id} style={{fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', padding: '0.5rem', background: 'var(--bg-main)', borderRadius: '8px'}}><span>{(o.summary_text || '').split(' ->>')[0]}</span><span style={{fontWeight: 800}}>₹{o.total_amount}</span></div>))}{chronicleData.dayPayments.length === 0 && <div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>No payments collected.</div>}</div></div><div className="card" style={{background: 'rgba(239, 68, 68, 0.05)', padding: '1.25rem'}}><h3 style={{marginTop: 0, fontSize: '1rem', color: 'var(--danger)', marginBottom: '1rem'}}><Icons.Ban style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '8px'}} /> Cancellations</h3><div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>{chronicleData.cancelled.map(o => (<div key={o.id} style={{fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', padding: '0.5rem', background: 'var(--bg-main)', borderRadius: '8px'}}><span>{(o.summary_text || '').split(' ->>')[0]}</span><span style={{fontWeight: 800}}>₹{o.total_amount}</span></div>))}{chronicleData.cancelled.length === 0 && <div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>No cancellations today.</div>}</div></div></div></div><div className="card" style={{padding: '1.5rem'}}><h3 style={{marginTop: 0, marginBottom: '1.5rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><Icons.History /> Master System Log</h3><div className="vertical-log-timeline" style={{maxHeight: '600px', overflowY: 'auto', paddingRight: '0.5rem'}}>{chronicleData.allLogs.map((log, idx) => { const timeStr = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const getEmoji = (type: string) => {
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem', alignItems: 'start'}}>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
+                  <div className="card">
+                    <h3 style={{marginTop: 0, marginBottom: '1.5rem', fontSize: '1.1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem'}}>
+                      <Icons.Orders style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '8px'}} /> Orders Received Today
+                    </h3>
+                    <div className="table-responsive">
+                      <table className="data-table">
+                        <thead><tr><th>ID</th><th>Customer</th><th>Items</th><th style={{textAlign: 'right'}}>Amount</th></tr></thead>
+                        <tbody>
+                          {chronicleData.dayOrders.map(o => (
+                            <tr key={o.id}>
+                              <td>#{o.id}</td>
+                              <td style={{fontWeight: 700}}>{(o.summary_text || '').split(' ->>')[0]}</td>
+                              <td style={{fontSize: '0.8rem', maxWidth: '300px'}}>{(o.summary_text || '').split('->>')[1] || ''}</td>
+                              <td style={{textAlign: 'right', fontWeight: 800}}>₹{o.total_amount}</td>
+                            </tr>
+                          ))}
+                          {chronicleData.dayOrders.length === 0 && <tr><td colSpan={4} style={{textAlign: 'center', padding: '2rem', color: 'var(--text-muted)'}}>No orders placed on this day.</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem'}}>
+                    <div className="card" style={{background: 'var(--success-soft)', padding: '1.25rem', border: '1px solid var(--success-soft)'}}>
+                      <h3 style={{marginTop: 0, fontSize: '1rem', color: 'var(--success)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                        <span><Icons.Money style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '8px'}} /> Cash Payments</span>
+                        <span style={{fontSize: '1.1rem', fontWeight: 900}}>₹{chronicleData.dayPayments.filter(o => o.payment_status === 'Cash').reduce((sum, o) => sum + o.total_amount, 0).toLocaleString()}</span>
+                      </h3>
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '0.6rem'}}>
+                        {chronicleData.dayPayments.filter(o => o.payment_status === 'Cash').sort((a,b) => new Date(b.payment_date!).getTime() - new Date(a.payment_date!).getTime()).map(o => (
+                          <div key={o.id} style={{fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0.8rem', background: 'var(--card-bg)', borderRadius: '10px', border: '1px solid var(--border)'}}>
+                            <div>
+                              <div style={{fontWeight: 800}}>{(o.summary_text || '').split(' ->>')[0]}</div>
+                              <div style={{fontSize: '0.7rem', color: 'var(--text-muted)'}}>
+                                {o.payment_date ? new Date(o.payment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---'} • #{o.id}
+                              </div>
+                            </div>
+                            <span style={{fontWeight: 800, color: 'var(--success)', alignSelf: 'center'}}>₹{o.total_amount}</span>
+                          </div>
+                        ))}
+                        {chronicleData.dayPayments.filter(o => o.payment_status === 'Cash').length === 0 && <div style={{fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem'}}>No cash payments.</div>}
+                      </div>
+                    </div>
+
+                    <div className="card" style={{background: 'var(--accent-soft)', padding: '1.25rem', border: '1px solid var(--accent-soft)'}}>
+                      <h3 style={{marginTop: 0, fontSize: '1rem', color: 'var(--accent)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                        <span><Icons.Zap style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '8px'}} /> UPI Payments</span>
+                        <span style={{fontSize: '1.1rem', fontWeight: 900}}>₹{chronicleData.dayPayments.filter(o => o.payment_status === 'UPI').reduce((sum, o) => sum + o.total_amount, 0).toLocaleString()}</span>
+                      </h3>
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '0.6rem'}}>
+                        {chronicleData.dayPayments.filter(o => o.payment_status === 'UPI').sort((a,b) => new Date(b.payment_date!).getTime() - new Date(a.payment_date!).getTime()).map(o => (
+                          <div key={o.id} style={{fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0.8rem', background: 'var(--card-bg)', borderRadius: '10px', border: '1px solid var(--border)'}}>
+                            <div>
+                              <div style={{fontWeight: 800}}>{(o.summary_text || '').split(' ->>')[0]}</div>
+                              <div style={{fontSize: '0.7rem', color: 'var(--text-muted)'}}>
+                                {o.payment_date ? new Date(o.payment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---'} • #{o.id}
+                              </div>
+                            </div>
+                            <span style={{fontWeight: 800, color: 'var(--accent)', alignSelf: 'center'}}>₹{o.total_amount}</span>
+                          </div>
+                        ))}
+                        {chronicleData.dayPayments.filter(o => o.payment_status === 'UPI').length === 0 && <div style={{fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem'}}>No UPI payments.</div>}
+                      </div>
+                    </div>
+
+                    <div className="card" style={{background: 'rgba(239, 68, 68, 0.05)', padding: '1.25rem', gridColumn: 'span 2'}}>
+                      <h3 style={{marginTop: 0, fontSize: '1rem', color: 'var(--danger)', marginBottom: '1.25rem'}}><Icons.Ban style={{display: 'inline-block', verticalAlign: 'middle', marginRight: '8px'}} /> Cancellations Today</h3>
+                      <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.75rem'}}>
+                        {chronicleData.cancelled.map(o => (
+                          <div key={o.id} style={{fontSize: '0.8rem', display: 'flex', gap: '0.8rem', padding: '0.5rem 1rem', background: 'var(--card-bg)', borderRadius: '80px', border: '1px solid var(--border)', alignItems: 'center'}}>
+                            <span style={{fontWeight: 700}}>{(o.summary_text || '').split(' ->>')[0]}</span>
+                            <span style={{opacity: 0.6}}>|</span>
+                            <span style={{fontWeight: 800, color: 'var(--danger)'}}>₹{o.total_amount}</span>
+                          </div>
+                        ))}
+                        {chronicleData.cancelled.length === 0 && <div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>No cancellations today.</div>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+<div className="card" style={{padding: '1.5rem'}}><h3 style={{marginTop: 0, marginBottom: '1.5rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}><Icons.History /> Master System Log</h3><div className="vertical-log-timeline" style={{maxHeight: '600px', overflowY: 'auto', paddingRight: '0.5rem'}}>{chronicleData.allLogs.map((log, idx) => { const timeStr = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const getEmoji = (type: string) => {
                                   const style = { width: 14, height: 14 };
                                   if (type === 'Received') return <Icons.Orders style={style} />;
                                   if (type === 'In Manufacturing') return <Icons.Flame style={style} />;
@@ -981,13 +1071,22 @@ function App() {
 
                   <div className="card" style={{display: 'grid', gridTemplateColumns: '1fr 350px', gap: '3rem'}}>
                     <div style={{display: 'flex', flexDirection: 'column', gap: '2.5rem'}}>
-                      <div>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem'}}>
-                          <h2 style={{margin: 0, fontSize: '2rem', fontWeight: 900}}>Order #{order.id}</h2>
-                          <span className="badge" style={{background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: '0.8rem', padding: '0.4rem 0.8rem'}}>{order.order_status.toUpperCase()}</span>
+                        <div>
+                          <div style={{display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem'}}>
+                            <h2 style={{margin: 0, fontSize: '2rem', fontWeight: 900}}>Order #{order.id}</h2>
+                            <span className="badge" style={{
+                              background: order.order_status === 'Delivered' ? 'var(--success)' : 
+                                          order.order_status === 'Cancelled' ? 'var(--danger)' : 'var(--accent-soft)', 
+                              color: (order.order_status === 'Delivered' || order.order_status === 'Cancelled') ? 'white' : 'var(--accent)', 
+                              fontSize: '0.8rem', 
+                              padding: '0.4rem 0.8rem',
+                              fontWeight: 800
+                            }}>
+                              {order.order_status.toUpperCase()}
+                            </span>
+                          </div>
+                          <p style={{color: 'var(--text-muted)', fontSize: '1.1rem', margin: 0}}>Placed on {formatDisplayDate(order.date)}</p>
                         </div>
-                        <p style={{color: 'var(--text-muted)', fontSize: '1.1rem', margin: 0}}>Placed on {formatDisplayDate(order.date)}</p>
-                      </div>
 
                       <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem'}}>
                         <div>
@@ -1000,13 +1099,60 @@ function App() {
                         </div>
                         <div>
                           <h4 style={{margin: '0 0 1rem 0', color: 'var(--text-muted)', fontSize: '0.75rem', letterSpacing: '0.1em'}}>PAYMENT STATUS</h4>
-                          <div style={{display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem'}}>
-                            <div style={{fontSize: '1.5rem', fontWeight: 900, color: order.payment_status === 'Debt' ? 'var(--danger)' : 'var(--success)'}}>₹{order.total_amount.toLocaleString()}</div>
-                            <span className="badge" style={{background: order.payment_status === 'Pending' ? 'var(--bg-main)' : order.payment_status === 'Debt' ? 'var(--danger-soft)' : 'var(--success-soft)', color: order.payment_status === 'Pending' ? 'var(--text-muted)' : order.payment_status === 'Debt' ? 'var(--danger)' : 'var(--success)'}}>
+                          <div style={{display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem'}}>
+                            <div style={{
+                              fontSize: '1.5rem', 
+                              fontWeight: 900, 
+                              color: order.payment_status === 'Debt' ? 'var(--danger)' : 
+                                     order.payment_status === 'Pending' ? 'var(--text-muted)' : 'var(--success)'
+                            }}>
+                              ₹{order.total_amount.toLocaleString()}
+                            </div>
+                            <span className="badge" style={{
+                              background: order.payment_status === 'Pending' ? 'var(--bg-main)' : 
+                                          order.payment_status === 'Debt' ? 'var(--danger-soft)' : 
+                                          order.payment_status === 'UPI' ? 'var(--accent-soft)' : 'var(--success-soft)', 
+                              color: order.payment_status === 'Pending' ? 'var(--text-muted)' : 
+                                     order.payment_status === 'Debt' ? 'var(--danger)' : 
+                                     order.payment_status === 'UPI' ? 'var(--accent)' : 'var(--success)',
+                              fontWeight: 900
+                            }}>
                               {order.payment_status.toUpperCase()}
                             </span>
                           </div>
-                          {order.payment_date && <div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Settled on {formatDisplayDate(order.payment_date)}</div>}
+                          
+                          {order.payment_status === 'Pending' && (
+                            <div style={{display: 'flex', gap: '0.75rem', marginBottom: '1.5rem'}}>
+                              <button className="btn btn-success-outline" style={{flex: 1, padding: '0.75rem', fontWeight: 800}} onClick={() => updatePaymentStatus(order.id, 'Cash')}>
+                                <Icons.Money /> CASH
+                              </button>
+                              <button className="btn btn-accent-outline" style={{flex: 1, padding: '0.75rem', fontWeight: 800}} onClick={() => updatePaymentStatus(order.id, 'UPI')}>
+                                <Icons.Zap /> UPI
+                              </button>
+                              <button className="btn btn-danger-outline" style={{flex: 1, padding: '0.75rem', fontWeight: 800}} onClick={() => updatePaymentStatus(order.id, 'Debt')}>
+                                <Icons.Alert /> DEBT
+                              </button>
+                            </div>
+                          )}
+
+                          {order.payment_status === 'Debt' && (
+                             <div style={{display: 'flex', gap: '0.75rem', marginBottom: '1.5rem'}}>
+                               <button className="btn btn-success-outline" style={{flex: 1, padding: '0.75rem', fontWeight: 800}} onClick={() => updatePaymentStatus(order.id, 'Cash')}>
+                                 <Icons.Money /> SETTLE CASH
+                               </button>
+                               <button className="btn btn-accent-outline" style={{flex: 1, padding: '0.75rem', fontWeight: 800}} onClick={() => updatePaymentStatus(order.id, 'UPI')}>
+                                 <Icons.Zap /> SETTLE UPI
+                               </button>
+                             </div>
+                          )}
+
+                          {order.order_status !== 'Delivered' && order.order_status !== 'Cancelled' && (
+                            <button className="btn btn-primary" style={{width: '100%', padding: '0.75rem', fontWeight: 800, background: 'var(--success)', marginBottom: '1.5rem'}} onClick={() => updateStatus(order.id, 'Delivered', 'Manually marked as Delivered')}>
+                              MARK AS DELIVERED ✓
+                            </button>
+                          )}
+
+                          {order.payment_date && <div style={{fontSize: '0.8rem', color: 'var(--text-muted)', background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)'}}>Settled on {formatDisplayDate(order.payment_date)}</div>}
                         </div>
                       </div>
 
@@ -1425,7 +1571,70 @@ function App() {
               </div>
             </div>
             <div style={{display: 'flex', flexDirection: 'column', gap: '2rem'}}>
-              <div className="card" style={{padding: '1.5rem', borderTop: '6px solid var(--success)'}}><h3 style={{marginTop: 0, marginBottom: '1.5rem', color: 'var(--success)', fontSize: '1.1rem', display: 'flex', justifyContent: 'space-between'}}>Today's Received<span style={{color: 'var(--text-main)'}}>₹{receivedToday.reduce((sum, o) => sum + o.total_amount, 0).toLocaleString()}</span></h3><div style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}>{receivedToday.map(o => (<div key={o.id} style={{fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)'}}><div><div style={{fontWeight: 700}}>{(o.summary_text || '').split(' ->>')[0]}</div><div style={{fontSize: '0.75rem', color: 'var(--text-muted)'}}>{o.payment_status} • #{o.id}</div></div><div style={{textAlign: 'right'}}><div style={{fontWeight: 800}}>₹{o.total_amount}</div><div style={{display: 'flex', gap: '0.3rem', justifyContent: 'flex-end', marginTop: '0.25rem'}}>{!o.is_payment_approved ? (<button className="btn btn-primary" style={{padding: '0.2rem 0.5rem', fontSize: '0.65rem'}} onClick={() => approvePayment(o.id)}>APPROVE</button>) : (<span style={{fontSize: '0.65rem', color: 'var(--success)', fontWeight: 800, alignSelf: 'center'}}>✅ APPROVED</span>)}<button className="btn btn-danger-outline" style={{padding: '0.2rem 0.5rem', fontSize: '0.65rem'}} onClick={() => updatePaymentStatus(o.id, 'Pending')}>UNDO</button></div></div></div>))}{receivedToday.length === 0 && <div style={{textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem'}}>No payments today.</div>}</div></div>
+              {/* Cash Section */}
+              <div className="card" style={{padding: '1.5rem', borderTop: '6px solid var(--success)'}}>
+                <h3 style={{marginTop: 0, marginBottom: '1.5rem', color: 'var(--success)', fontSize: '1.1rem', display: 'flex', justifyContent: 'space-between'}}>
+                  Cash Collections Today
+                  <span style={{color: 'var(--text-main)'}}>₹{cashToday.reduce((sum, o) => sum + o.total_amount, 0).toLocaleString()}</span>
+                </h3>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}>
+                  {cashToday.map(o => (
+                    <div key={o.id} style={{fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)'}}>
+                      <div>
+                        <div style={{fontWeight: 700}}>{(o.summary_text || '').split(' ->>')[0]}</div>
+                        <div style={{fontSize: '0.75rem', color: 'var(--text-muted)'}}>
+                          {o.payment_date ? new Date(o.payment_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date(o.payment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No Time'} • #{o.id}
+                        </div>
+                      </div>
+                      <div style={{textAlign: 'right'}}>
+                        <div style={{fontWeight: 800}}>₹{o.total_amount}</div>
+                        <div style={{display: 'flex', gap: '0.3rem', justifyContent: 'flex-end', marginTop: '0.25rem'}}>
+                          {!o.is_payment_approved ? (
+                            <button className="btn btn-primary" style={{padding: '0.2rem 0.5rem', fontSize: '0.65rem'}} onClick={() => approvePayment(o.id)}>APPROVE</button>
+                          ) : (
+                            <span style={{fontSize: '0.65rem', color: 'var(--success)', fontWeight: 800, alignSelf: 'center'}}>✅ APPROVED</span>
+                          )}
+                          <button className="btn btn-danger-outline" style={{padding: '0.2rem 0.5rem', fontSize: '0.65rem'}} onClick={() => updatePaymentStatus(o.id, 'Pending')}>UNDO</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {cashToday.length === 0 && <div style={{textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem'}}>No cash payments today.</div>}
+                </div>
+              </div>
+
+              {/* UPI Section */}
+              <div className="card" style={{padding: '1.5rem', borderTop: '6px solid var(--accent)'}}>
+                <h3 style={{marginTop: 0, marginBottom: '1.5rem', color: 'var(--accent)', fontSize: '1.1rem', display: 'flex', justifyContent: 'space-between'}}>
+                  UPI Collections Today
+                  <span style={{color: 'var(--text-main)'}}>₹{upiToday.reduce((sum, o) => sum + o.total_amount, 0).toLocaleString()}</span>
+                </h3>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}>
+                  {upiToday.map(o => (
+                    <div key={o.id} style={{fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)'}}>
+                      <div>
+                        <div style={{fontWeight: 700}}>{(o.summary_text || '').split(' ->>')[0]}</div>
+                        <div style={{fontSize: '0.75rem', color: 'var(--text-muted)'}}>
+                          {o.payment_date ? new Date(o.payment_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date(o.payment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No Time'} • #{o.id}
+                        </div>
+                      </div>
+                      <div style={{textAlign: 'right'}}>
+                        <div style={{fontWeight: 800}}>₹{o.total_amount}</div>
+                        <div style={{display: 'flex', gap: '0.3rem', justifyContent: 'flex-end', marginTop: '0.25rem'}}>
+                          {!o.is_payment_approved ? (
+                            <button className="btn btn-primary" style={{padding: '0.2rem 0.5rem', fontSize: '0.65rem'}} onClick={() => approvePayment(o.id)}>APPROVE</button>
+                          ) : (
+                            <span style={{fontSize: '0.65rem', color: 'var(--success)', fontWeight: 800, alignSelf: 'center'}}>✅ APPROVED</span>
+                          )}
+                          <button className="btn btn-danger-outline" style={{padding: '0.2rem 0.5rem', fontSize: '0.65rem'}} onClick={() => updatePaymentStatus(o.id, 'Pending')}>UNDO</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {upiToday.length === 0 && <div style={{textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem'}}>No UPI payments today.</div>}
+                </div>
+              </div>
+
               <div className="card" style={{padding: '1.5rem'}}><h3 style={{marginTop: 0, marginBottom: '1.5rem', fontSize: '1.1rem'}}>Historical Logs</h3><div style={{display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem'}}>{paymentHistory.slice(0, 10).map(([date, data]) => { const groupTotal = data.orders.reduce((sum, o) => sum + o.total_amount, 0); const allApproved = data.orders.every(o => o.is_payment_approved); return (<div key={date} style={{padding: '0.75rem', background: 'var(--bg-main)', borderRadius: '10px', fontSize: '0.85rem', border: allApproved ? '1px solid var(--success-soft)' : '1px solid var(--border)'}}><div style={{fontWeight: 800, display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem'}}><span>{date}</span><span style={{color: allApproved ? 'var(--success)' : 'var(--accent)'}}>₹{groupTotal.toLocaleString()}</span></div><div style={{fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between'}}><span>{data.orders.length} Orders</span>{!allApproved && <span style={{color: 'var(--accent)', fontWeight: 800}}>⚠️ NEEDS APPROVAL</span>}</div></div>); })}{paymentHistory.length === 0 && (<div style={{textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem'}}>No historical payments found.</div>)}</div></div>
             </div>
           </div>
@@ -1929,16 +2138,36 @@ function App() {
 
                 <div className="input-group">
                   <label>ACTIVE AI ENGINE</label>
-                  <div style={{padding: '1.25rem', background: 'var(--bg-main)', borderRadius: '12px', border: '2px solid var(--accent-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                    <div>
-                      <div style={{fontWeight: 800, fontSize: '1rem'}}>Llama 3.2 (1B Instruct)</div>
-                      <div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Optimized for speed and business logic</div>
-                    </div>
-                    <span className="badge" style={{background: 'var(--accent-gradient)', color: 'white', padding: '0.4rem 0.8rem'}}>LOCAL</span>
-                  </div>
+                  <select 
+                    className="styled-input" 
+                    style={{appearance: 'auto'}}
+                    disabled // Currently locked to Llama 3.2 for stability
+                  >
+                    <option>Llama 3.2 (1B Instruct) - Recommended</option>
+                    <option>Phi-3.5 Mini (3.8B) - Higher Quality (Needs 8GB+ RAM)</option>
+                    <option>Qwen 2.5 (0.5B) - Fastest / Ultra Light</option>
+                  </select>
+                  <p style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem'}}>
+                    * Selected model will be cached in your browser. Llama 3.2 (1B) is the best balance of speed and intelligence.
+                  </p>
                 </div>
 
                 <div style={{display: 'flex', gap: '1rem'}}>
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{flex: 1}}
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/ai-context`);
+                        if (res.ok) addToast("AI Context Connection: SUCCESS ✅");
+                        else addToast("AI Context Connection: FAILED ❌", "error");
+                      } catch {
+                        addToast("AI Context Connection: ERROR ❌", "error");
+                      }
+                    }}
+                  >
+                    TEST BACKEND CONNECTION
+                  </button>
                   <button 
                     className="btn btn-secondary" 
                     style={{flex: 1}}
@@ -1971,6 +2200,7 @@ function App() {
         )}
 
       </main>
+      <ChatBubble />
     </div>
   );
 }

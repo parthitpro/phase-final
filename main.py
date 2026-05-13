@@ -7,6 +7,7 @@ import pandas as pd
 import os
 import datetime
 import logging
+import json
 import models, database, schemas
 import ai_service
 
@@ -100,7 +101,7 @@ def delete_customer(customer_id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"message": "Customer and all associated orders deleted"}
 
-def add_order_log(db: Session, order_id: int, status: str, description: str = None):
+def add_order_log(db: Session, order_id: int, status: str, description: str = None, timestamp: datetime.datetime = None):
     try:
         # If this is an 'undo' or manual status set, we should remove logs that come "after" this new status
         # to keep the timeline clean.
@@ -114,14 +115,15 @@ def add_order_log(db: Session, order_id: int, status: str, description: str = No
                     models.OrderLog.status_reached.in_(future_statuses)
                 ).delete(synchronize_session=False)
 
-        log = models.OrderLog(order_id=order_id, status_reached=status, description=description)
+        log = models.OrderLog(order_id=order_id, status_reached=status, description=description, timestamp=timestamp or datetime.datetime.now())
         db.add(log)
         db.flush()
     except Exception as e:
         logger.error(f"Failed to add order log for order {order_id}: {e}")
         # We do not raise the exception or rollback the whole transaction here 
         # because the log is non-critical compared to the order itself.
-        db.expunge_all() # Ensure the failed log object is removed from session
+        # Just ensure the failed log is not part of the next commit
+        db.rollback() 
 
 # --- ORDERS ---
 @app.get("/orders", response_model=List[schemas.Order])
@@ -147,6 +149,10 @@ def update_order_status(order_id: int, status: str, description: Optional[str] =
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")
     
+    # If the order is already Paid or Debt, it must remain Delivered.
+    if db_order.payment_status in ["Cash", "UPI", "Debt"] and status != "Delivered" and status != "Cancelled":
+        raise HTTPException(status_code=400, detail=f"Cannot change status to {status} because order is already {db_order.payment_status}")
+
     db_order.order_status = status
     add_order_log(db, order_id, status, description)
     db.commit()
@@ -173,12 +179,19 @@ def approve_payment(order_id: int, db: Session = Depends(database.get_db)):
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")
     
+    now = datetime.datetime.now()
     db_order.is_payment_approved = 1
+    # If it's being approved but payment_status was still pending, default to Cash
+    if db_order.payment_status in ["Pending", "Debt"]:
+        db_order.payment_status = "Cash"
+        db_order.payment_date = now
+
     # Ensure it's marked delivered if payment is approved
     if db_order.order_status != "Delivered":
         db_order.order_status = "Delivered"
+        add_order_log(db, order_id, "Delivered", "Marked Delivered during payment approval", timestamp=now)
         
-    add_order_log(db, order_id, "Completed", "Payment verified and order finalized.")
+    add_order_log(db, order_id, "Completed", "Payment verified and order finalized.", timestamp=now)
     db.commit()
     db.refresh(db_order)
     return db_order
@@ -204,6 +217,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(database.get_
         customer.category = order.category
     
     db_order = models.Order(customer_id=customer.id, total_amount=0, summary_text="", payment_status="Pending", order_status="Received")
+    db_order_res = db_order
     db.add(db_order)
     db.flush()
     
@@ -215,8 +229,8 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(database.get_
     add_order_log(db, db_order.id, "Received", "Order placed by user")
     
     db.commit()
-    db.refresh(db_order)
-    return db_order
+    db.refresh(db_order_res)
+    return db_order_res
 
 @app.put("/orders/{order_id}", response_model=schemas.Order)
 def update_order(order_id: int, order_update: schemas.OrderUpdate, db: Session = Depends(database.get_db)):
@@ -225,22 +239,37 @@ def update_order(order_id: int, order_update: schemas.OrderUpdate, db: Session =
         raise HTTPException(status_code=404, detail="Order not found")
     
     if order_update.payment_status:
+        now = datetime.datetime.now()
         # Update payment_date if status changed from Pending/Debt to Cash/UPI
         is_paid = order_update.payment_status in ["Cash", "UPI"]
         was_unpaid = db_order.payment_status in ["Pending", "Debt"]
         
-        if was_unpaid and is_paid:
-            db_order.payment_date = datetime.datetime.now()
-            db_order.is_payment_approved = 1 # AUTO-APPROVE
-            add_order_log(db, order_id, "Paid", f"Payment completed via {order_update.payment_status}")
-            db_order.order_status = "Delivered" 
-        # Clear payment_date if changed back to Pending or Debt
-        elif order_update.payment_status in ["Pending", "Debt"]:
+        if is_paid:
+            # If marking as paid (even if it was already paid), it MUST be Delivered
+            if db_order.order_status != "Delivered":
+                db_order.order_status = "Delivered"
+                add_order_log(db, order_id, "Delivered", f"Automatic delivery on {order_update.payment_status} payment", timestamp=now)
+            
+            if was_unpaid:
+                db_order.payment_date = now
+                db_order.is_payment_approved = 1 # AUTO-APPROVE
+                add_order_log(db, order_id, "Paid", f"Payment completed via {order_update.payment_status}", timestamp=now)
+        
+        # Clear payment_date if changed back to Pending
+        elif order_update.payment_status == "Pending":
             db_order.payment_date = None
             db_order.is_payment_approved = 0
-            if order_update.payment_status == "Debt":
-                add_order_log(db, order_id, "Debt", "Marked as Outstanding Debt")
-                db_order.order_status = "Delivered" # Ensure it's marked as delivered if it's debt
+            # We don't necessarily revert Delivered status, as it might have been physically delivered
+            add_order_log(db, order_id, "Pending", "Payment marked as Pending (Undo)")
+
+        # Handle Debt
+        elif order_update.payment_status == "Debt":
+            db_order.payment_date = None
+            db_order.is_payment_approved = 0
+            if db_order.order_status != "Delivered":
+                db_order.order_status = "Delivered"
+                add_order_log(db, order_id, "Delivered", "Marked as Delivered for Debt tracking", timestamp=now)
+            add_order_log(db, order_id, "Debt", "Marked as Outstanding Debt", timestamp=now)
             
         db_order.payment_status = order_update.payment_status
     

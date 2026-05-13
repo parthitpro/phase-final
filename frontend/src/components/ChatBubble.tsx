@@ -21,17 +21,26 @@ export const ChatBubble: React.FC = () => {
 
   const initEngine = async () => {
     if (isInitializing) return;
+
+    // Check for WebGPU
+    if (!navigator.gpu) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: "❌ Your browser does not support WebGPU. Please use a modern browser like Chrome or Edge (v113+) and ensure hardware acceleration is enabled." 
+      }]);
+      return;
+    }
+
     setIsInitializing(true);
     try {
       await webLLM.init((report) => {
-        // Parse progress from report text if possible or just use text
         const percentMatch = report.text.match(/(\d+)%/);
         const percent = percentMatch ? parseInt(percentMatch[1]) : 0;
         setProgress({ text: report.text, percent });
       });
       setProgress(null);
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `❌ Initialization Error: ${err.message}. Make sure your browser supports WebGPU.` }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `❌ Initialization Error: ${err.message}` }]);
     } finally {
       setIsInitializing(false);
     }
@@ -41,8 +50,12 @@ export const ChatBubble: React.FC = () => {
     if (!input.trim() || isLoading) return;
 
     // Initialize on first message if not already done
-    if (!progress && !isInitializing) {
-      await initEngine();
+    if (!webLLM.isInitialized()) {
+      if (!isInitializing) {
+        await initEngine();
+      }
+      // If initialization is still in progress (downloading), wait
+      if (isInitializing || progress) return;
     }
 
     const userMessage: ChatMessage = { role: 'user', content: input };
@@ -52,17 +65,38 @@ export const ChatBubble: React.FC = () => {
 
     try {
       // 1. Fetch Business Context from Backend
-      const contextRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/ai-context`);
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const contextRes = await fetch(`${backendUrl}/ai-context`);
+      
+      if (!contextRes.ok) {
+        throw new Error("Could not connect to the backend business data. Please ensure the server is running.");
+      }
+
       const contextData = await contextRes.json();
       
-      const systemPrompt = `You are 'Viren's Khakhra AI', a professional assistant. 
-Use this REAL-TIME data to help Viren: ${JSON.stringify(contextData)}
-Be concise and helpful. If data is missing, say you don't have it.`;
+      const systemPrompt = `You are 'Viren's Khakhra AI', the central intelligence of Viren's Khakhra business. 
+Your goal is to help Viren manage orders, debts, and manufacturing efficiently.
 
-      // 2. Generate Local Response
+CURRENT BUSINESS STATE:
+- Outstanding Debt: ₹${contextData.total_outstanding_debt}
+- Recent Debtors: ${contextData.debt_details.slice(0, 5).map((d: any) => `${d.customer} (₹${d.amount})`).join(', ')}
+- Product Catalog: ${contextData.product_catalog.length} items available.
+- Recent Activity: ${contextData.recent_activity.length} recent orders tracked.
+
+GUIDELINES:
+1. Be professional, concise, and proactive.
+2. Use the provided numbers to give exact answers.
+3. If asked about a customer's debt, check 'recent_activity' and 'debt_details'.
+4. If data is missing or not in the context, politely inform Viren.
+5. You run LOCALLY on Viren's machine for 100% privacy.
+
+Full Context JSON: ${JSON.stringify(contextData)}`;
+
+      // 2. Generate Local Response (Limit history to 10 messages for speed)
+      const history = messages.slice(-10);
       const chatMessages = [
         { role: 'system', content: systemPrompt },
-        ...messages,
+        ...history,
         userMessage
       ];
 
@@ -77,7 +111,7 @@ Be concise and helpful. If data is missing, say you don't have it.`;
       });
 
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `❌ Error: ${err.message}` }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `❌ AI Error: ${err.message}` }]);
     } finally {
       setIsLoading(false);
     }
@@ -90,9 +124,9 @@ Be concise and helpful. If data is missing, say you don't have it.`;
         <button
           onClick={() => setIsOpen(true)}
           className="chat-toggle-btn"
-          title="Local AI Assistant"
+          title="Viren's AI Assistant"
         >
-          <Icons.WhatsApp style={{ width: 32, height: 32 }} />
+          <Icons.Zap style={{ width: 32, height: 32 }} />
         </button>
       )}
 
