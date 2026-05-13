@@ -39,13 +39,32 @@ export const ChatBubble: React.FC = () => {
         setProgress({ text: report.text, percent });
       });
       // Small delay to ensure WebGPU buffers are fully settled
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 800));
       setProgress(null);
     } catch (err: unknown) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `❌ Initialization Error: ${(err as Error).message}` }]);
-      webLLM.unload(); // Clean up on failure
+      console.error("AI Init Error:", err);
+      setMessages(prev => [...prev, { role: 'assistant', content: `❌ Initialization Error: ${(err as Error).message}. Try clearing the AI cache in Settings.` }]);
+      webLLM.unload(); 
     } finally {
       setIsInitializing(false);
+    }
+  };
+
+  const clearAICache = async () => {
+    if (confirm("This will delete the downloaded AI model (1.5GB) from your browser cache. Use this only if the AI is persistently failing. Continue?")) {
+      try {
+        await webLLM.unload();
+        const databases = await window.indexedDB.databases();
+        for (const db of databases) {
+          if (db.name?.includes('mlc')) {
+            window.indexedDB.deleteDatabase(db.name);
+          }
+        }
+        alert("AI Cache cleared. Please refresh the page.");
+        window.location.reload();
+      } catch (err) {
+        alert("Error clearing cache: " + err);
+      }
     }
   };
 
@@ -140,9 +159,19 @@ Full Context JSON: ${JSON.stringify(contextData)}`;
               <Icons.Cpu size={24} />
               <span>Viren's Offline AI</span>
             </div>
-            <button onClick={() => setIsOpen(false)} className="chat-close-btn">
-              <Icons.Cancel style={{ width: 18, height: 18 }} />
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button 
+                onClick={clearAICache} 
+                className="chat-close-btn" 
+                title="Clear AI Cache"
+                style={{ opacity: 0.6 }}
+              >
+                <Icons.Delete style={{ width: 18, height: 18 }} />
+              </button>
+              <button onClick={() => setIsOpen(false)} className="chat-close-btn">
+                <Icons.Cancel style={{ width: 18, height: 18 }} />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
