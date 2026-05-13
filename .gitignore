@@ -1,6 +1,8 @@
 # Database
 orders.db
 *.db
+*.db-shm
+*.db-wal
 backups/
 
 # Python
