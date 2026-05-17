@@ -10,8 +10,6 @@ import json
 import models
 import database
 import schemas
-import ai_service
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -414,14 +412,3 @@ def bulk_dispatch_delivery(order_ids: List[int], db: Session = Depends(database.
         add_order_log(db, o.id, "Out for Delivery", "Order dispatched for delivery")
     db.commit()
     return {"message": f"{len(orders)} orders out for delivery"}
-
-# --- AI CHAT CONTEXT ---
-@app.get("/ai-context")
-def get_ai_context(db: Session = Depends(database.get_db)):
-    """Provides real-time business data for the local AI assistant."""
-    try:
-        context_json = ai_service.get_business_context(db)
-        return json.loads(context_json)
-    except Exception as e:
-        logger.error(f"AI Context Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))

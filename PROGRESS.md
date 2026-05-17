@@ -25,13 +25,7 @@ A full-stack ordering system for "Viren's Khakhra" business, replacing an Excel-
 
 ### Planned Goals
 - **Architectural Health:** [COMPLETED] "God Node" refactoring of `App.tsx` and backend hardening.
-- **AI Ready:** [COMPLETED] Full Graphify indexing and onboarding documentation.
 - **Analytics Polish:** Enhance charts with more granular data (Next Priority).
-- **Smart Order Suggestions:** [COMPLETED] Interactive auto-fill logic implemented.
-- **Customer Notes:** [COMPLETED] Backend/Frontend support finished.
-- **Contextual Visibility:** [COMPLETED] Notes display on Dashboard.
-- **Manufacturing Workflow:** [COMPLETED] Bulk dispatch and aggregation implemented.
-- **Order Timeline:** [COMPLETED] Visual log-based tracking for customers/admins.
 Bulk Dispatch:** One-click action to send all filtered orders to production.
 - **Delivery Workflow Tab:** Dedicated management of orders ready for dispatch and currently out for delivery.
 - **Backend Hardening:** New API endpoints for bulk status updates and manufacturing projections. Database migration (v3) successfully applied.
@@ -81,8 +75,7 @@ Bulk Dispatch:** One-click action to send all filtered orders to production.
 - **Project Reorganization:** Cleaned up unused imports and standardized backend service structures.
 
 ### Planned Goals
-- **Local AI Assistant:** [COMPLETED] Migrated from OpenRouter to local WebLLM (Llama 3.2 1B). Implemented `/ai-context` RAG endpoint, browser-based inference, and on-device privacy. Added "Test Connection" and "Clear Cache" utilities.
-- **Mobile Responsive Polish:** [COMPLETED] Implemented media queries for tables, sidebar, and chat bubble. Widened columns and added card-based layouts for small screens.
+- **Mobile Responsive Polish:** [COMPLETED] Implemented media queries for tables, sidebar, and layout cards.
 - **Database Backup:** [COMPLETED] Automated local backup script for `orders.db` with 10-file rotation.
 - **Analytics Polish:** [PLANNED] Enhance charts with more granular data.
 - **Cloud Sync:** [PLANNED] Optional encrypted cloud backup for premium users.

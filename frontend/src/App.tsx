@@ -8,10 +8,20 @@ import { Timeline, VerticalTimeline } from './components/Timeline';
 import { ManufacturingPacking, AnimatedPacking, ProductAnimation, AnimatedDelivery } from './components/Manufacturing';
 import { getLocalDate, formatDisplayDate, toISODate, formatWeight } from './utils/formatters';
 
-import { ChatBubble } from './components/ChatBubble';
+import { BottomNavigation } from './components/Navigation';
+import { localDB } from './services/local-db';
+import { syncService } from './services/sync';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  
+  useEffect(() => {
+    const initApp = async () => {
+      await localDB.init();
+      syncService.startAutoSync();
+    };
+    initApp();
+  }, []);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -761,7 +771,6 @@ function App() {
             <button className={`nav-item ${activeTab === 'money' ? 'active' : ''}`} onClick={() => setActiveTab('money')} title="Ledger"><Icons.Money /> {!sidebarCollapsed && 'Ledger'}</button>
             <button className={`nav-item ${activeTab === 'export' ? 'active' : ''}`} onClick={() => setActiveTab('export')} title="Data Export"><Icons.Export /> {!sidebarCollapsed && 'Data Export'}</button>
             <button className={`nav-item ${activeTab === 'recent_log' ? 'active' : ''}`} onClick={() => setActiveTab('recent_log')} title="Activity Feed"><Icons.History /> {!sidebarCollapsed && 'Activity Feed'}</button>
-            <button className={`nav-item ${activeTab === 'ai_settings' ? 'active' : ''}`} onClick={() => setActiveTab('ai_settings')} title="AI Assistant" style={{color: 'var(--accent)'}}><Icons.Zap /> {!sidebarCollapsed && 'AI Assistant'}</button>
           </div>
         </nav>
         <div className="sidebar-footer">
@@ -2106,103 +2115,8 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'ai_settings' && (
-          <div className="ai-settings-page" style={{maxWidth: '800px', margin: '0 auto'}}>
-            <div className="card" style={{padding: '3rem'}}>
-              <div style={{textAlign: 'center', marginBottom: '3rem'}}>
-                <div style={{width: 80, height: 80, background: 'var(--accent-soft)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', margin: '0 auto 1.5rem'}}>
-                  <Icons.Zap size={40} />
-                </div>
-                <h2 style={{fontSize: '2rem', marginBottom: '0.5rem'}}>Local AI Assistant</h2>
-                <p style={{color: 'var(--text-muted)'}}>Private, offline, and free AI running directly on your device.</p>
-              </div>
-
-              <div style={{display: 'flex', flexDirection: 'column', gap: '2.5rem'}}>
-                <div className="info-box" style={{background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.5rem'}}>
-                  <h4 style={{margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800}}>
-                    <Icons.Trust size={18} /> WEB-LLM TECHNOLOGY
-                  </h4>
-                  <p style={{fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.6'}}>
-                    Viren's Khakhra now uses **WebGPU** to run AI models directly in your browser. 
-                    This removes the need for expensive API keys and guarantees 100% privacy.
-                  </p>
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem'}}>
-                    <div style={{padding: '1rem', background: 'var(--white)', borderRadius: '8px', border: '1px solid var(--border)'}}>
-                      <div style={{fontWeight: 800, fontSize: '0.75rem', color: 'var(--accent)', marginBottom: '0.25rem'}}>PRIVACY</div>
-                      <div style={{fontSize: '0.85rem'}}>100% On-Device</div>
-                    </div>
-                    <div style={{padding: '1rem', background: 'var(--white)', borderRadius: '8px', border: '1px solid var(--border)'}}>
-                      <div style={{fontWeight: 800, fontSize: '0.75rem', color: 'var(--success)', marginBottom: '0.25rem'}}>COST</div>
-                      <div style={{fontSize: '0.85rem'}}>Free Forever</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="input-group">
-                  <label>ACTIVE AI ENGINE</label>
-                  <select 
-                    className="styled-input" 
-                    style={{appearance: 'auto'}}
-                    disabled // Currently locked to Llama 3.2 for stability
-                  >
-                    <option>Llama 3.2 (1B Instruct) - Recommended</option>
-                    <option>Phi-3.5 Mini (3.8B) - Higher Quality (Needs 8GB+ RAM)</option>
-                    <option>Qwen 2.5 (0.5B) - Fastest / Ultra Light</option>
-                  </select>
-                  <p style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem'}}>
-                    * Selected model will be cached in your browser. Llama 3.2 (1B) is the best balance of speed and intelligence.
-                  </p>
-                </div>
-
-                <div style={{display: 'flex', gap: '1rem'}}>
-                  <button 
-                    className="btn btn-secondary" 
-                    style={{flex: 1}}
-                    onClick={async () => {
-                      try {
-                        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/ai-context`);
-                        if (res.ok) addToast("AI Context Connection: SUCCESS ✅");
-                        else addToast("AI Context Connection: FAILED ❌", "error");
-                      } catch {
-                        addToast("AI Context Connection: ERROR ❌", "error");
-                      }
-                    }}
-                  >
-                    TEST BACKEND CONNECTION
-                  </button>
-                  <button 
-                    className="btn btn-secondary" 
-                    style={{flex: 1}}
-                    onClick={() => {
-                      if (window.confirm("This will clear the cached AI model (~1.5GB). You will need to re-download it. Proceed?")) {
-                        window.indexedDB.deleteDatabase("webllm-db");
-                        alert("Cache cleared.");
-                        window.location.reload();
-                      }
-                    }}
-                  >
-                    RESET MODEL CACHE
-                  </button>
-                  <button className="btn btn-primary" style={{flex: 1}} onClick={() => setActiveTab('dashboard')}>
-                    BACK TO DASHBOARD
-                  </button>
-                </div>
-
-                <div className="customer-info-card" style={{background: 'var(--success-soft)', borderLeft: '4px solid var(--success)', padding: '1.5rem'}}>
-                  <h4 style={{margin: '0 0 0.5rem 0', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-                    <Icons.CheckCircle size={18} /> WEB-GPU STATUS
-                  </h4>
-                  <p style={{fontSize: '0.9rem', margin: 0}}>
-                    Your system is ready. The AI will initialize automatically when you first open the chat.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
       </main>
-      <ChatBubble />
+      <BottomNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }
